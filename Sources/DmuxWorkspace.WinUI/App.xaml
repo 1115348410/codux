@@ -13,6 +13,8 @@
             <!-- Converters -->
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibility" />
             <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+            <converters:NullToVisibilityConverter x:Key="NullToVisibility" />
+            <converters:NullToBoolConverter x:Key="NullToBoolConverter" />
 
             <!-- Colors -->
             <Color x:Key="AccentColor">#0078D4</Color>

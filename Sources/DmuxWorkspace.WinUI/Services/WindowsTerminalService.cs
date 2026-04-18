@@ -1,5 +1,7 @@
 using Serilog;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Codux.WinUI.Services;
 
@@ -12,28 +14,32 @@ public class WindowsTerminalService : ITerminalService
     public Task<Guid> CreateSessionAsync(string workingDirectory, CancellationToken ct = default)
     {
         var sessionId = Guid.NewGuid();
-        
-        var session = new TerminalSession
-        {
-            Id = sessionId,
-            WorkingDirectory = workingDirectory,
-            Process = new System.Diagnostics.Process()
-        };
 
-        session.Process.StartInfo = new System.Diagnostics.ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
-            FileName = "cmd.exe",
+            FileName = "powershell.exe",
+            Arguments = "-NoLogo -NoExit -Command -",
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            StandardOutputEncoding = System.Text.Encoding.UTF8,
+            StandardErrorEncoding = System.Text.Encoding.UTF8
         };
 
-        session.Process.OutputDataReceived += (s, e) =>
+        var process = new Process { StartInfo = startInfo };
+        var session = new TerminalSession
         {
-            if (!string.IsNullOrEmpty(e.Data))
+            Id = sessionId,
+            WorkingDirectory = workingDirectory,
+            Process = process
+        };
+
+        process.OutputDataReceived += (s, e) =>
+        {
+            if (e.Data != null)
             {
                 OutputReceived?.Invoke(this, new TerminalOutputEventArgs
                 {
@@ -43,48 +49,57 @@ public class WindowsTerminalService : ITerminalService
             }
         };
 
-        session.Process.ErrorDataReceived += (s, e) =>
+        process.ErrorDataReceived += (s, e) =>
         {
-            if (!string.IsNullOrEmpty(e.Data))
+            if (e.Data != null)
             {
                 OutputReceived?.Invoke(this, new TerminalOutputEventArgs
                 {
                     SessionId = sessionId,
-                    Output = e.Data + Environment.NewLine
+                    Output = "[ERROR] " + e.Data + Environment.NewLine
                 });
             }
         };
 
-        session.Process.Start();
-        session.Process.BeginOutputReadLine();
-        session.Process.BeginErrorReadLine();
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
 
         _sessions[sessionId] = session;
-        Log.Information("Terminal session created: {SessionId}", sessionId);
+        Log.Information("Terminal session created: {SessionId} in {WorkingDirectory}", sessionId, workingDirectory);
 
         return Task.FromResult(sessionId);
     }
 
-    public Task WriteAsync(Guid sessionId, string input, CancellationToken ct = default)
+    public async Task WriteAsync(Guid sessionId, string input, CancellationToken ct = default)
     {
         if (_sessions.TryGetValue(sessionId, out var session))
         {
-            session.Process.StandardInput.WriteLine(input);
-            session.Process.StandardInput.Flush();
+            if (!session.Process.HasExited)
+            {
+                await session.Process.StandardInput.WriteLineAsync(input);
+                await session.Process.StandardInput.FlushAsync(ct);
+            }
         }
-        return Task.CompletedTask;
     }
 
     public Task CloseSessionAsync(Guid sessionId, CancellationToken ct = default)
     {
         if (_sessions.TryRemove(sessionId, out var session))
         {
-            if (!session.Process.HasExited)
+            try
             {
-                session.Process.Kill();
+                if (!session.Process.HasExited)
+                {
+                    session.Process.Kill(entireProcessTree: true);
+                }
+                session.Process.Dispose();
+                Log.Information("Terminal session closed: {SessionId}", sessionId);
             }
-            session.Process.Dispose();
-            Log.Information("Terminal session closed: {SessionId}", sessionId);
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Error closing terminal session: {SessionId}", sessionId);
+            }
         }
         return Task.CompletedTask;
     }
@@ -98,6 +113,6 @@ public class WindowsTerminalService : ITerminalService
     {
         public Guid Id { get; set; }
         public string WorkingDirectory { get; set; } = string.Empty;
-        public System.Diagnostics.Process Process { get; set; } = null!;
+        public Process Process { get; set; } = null!;
     }
 }

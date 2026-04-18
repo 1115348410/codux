@@ -7,12 +7,12 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280" />
+            <ColumnDefinition Width="280" MinWidth="200" MaxWidth="400" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- Projects List -->
+        <!-- Projects Sidebar -->
         <Grid Grid.Column="0" Background="{StaticResource SurfaceBrush}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -29,16 +29,20 @@
                 <TextBlock Text="Projects"
                            FontSize="14"
                            FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}" />
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           VerticalAlignment="Center" />
 
                 <Button Grid.Column="1"
                         Content="+"
                         Width="28"
                         Height="28"
                         FontSize="16"
+                        FontWeight="Bold"
                         Background="Transparent"
                         BorderThickness="0"
-                        Click="OnAddProjectClick" />
+                        Foreground="{StaticResource TextPrimaryBrush}"
+                        Click="OnAddProjectClick"
+                        ToolTipService.ToolTip="Add Project" />
             </Grid>
 
             <!-- Project List -->
@@ -47,49 +51,59 @@
                       ItemsSource="{x:Bind ViewModel.Projects}"
                       SelectedItem="{x:Bind ViewModel.SelectedProject, Mode=TwoWay}"
                       Background="Transparent"
-                      BorderThickness="0">
+                      BorderThickness="0"
+                      SelectionChanged="OnProjectSelectionChanged">
                 <ListView.ItemTemplate>
                     <DataTemplate>
-                        <Grid Padding="12,8">
+                        <Grid Padding="12,10">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="0">
+                            <SymbolIcon Symbol="Folder24"
+                                        Foreground="{StaticResource AccentBrush}"
+                                        Margin="0,0,12,0" />
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Name}"
                                           FontSize="13"
-                                          Foreground="{StaticResource TextPrimaryBrush}" />
+                                          Foreground="{StaticResource TextPrimaryBrush}"
+                                          TextTrimming="CharacterEllipsis" />
                                 <TextBlock Text="{Binding Path}"
                                           FontSize="11"
                                           Foreground="{StaticResource TextSecondaryBrush}"
                                           TextTrimming="CharacterEllipsis"
-                                          MaxWidth="200" />
+                                          MaxWidth="180" />
                             </StackPanel>
 
-                            <Button Grid.Column="1"
-                                    Content="x"
-                                    Width="20"
-                                    Height="20"
+                            <Button Grid.Column="2"
+                                    Content="X"
+                                    Width="24"
+                                    Height="24"
                                     FontSize="10"
                                     Background="Transparent"
                                     BorderThickness="0"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
                                     Tag="{Binding}"
-                                    Click="OnRemoveProjectClick" />
+                                    Click="OnRemoveProjectClick"
+                                    ToolTipService.ToolTip="Remove Project"
+                                    Visibility="Visible" />
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
         </Grid>
 
-        <!-- Splitter -->
+        <!-- Vertical Splitter -->
         <GridSplitter Grid.Column="1"
                       Width="1"
                       Background="{StaticResource BorderBrush}"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Stretch" />
 
-        <!-- Terminal Panes -->
+        <!-- Main Content Area -->
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -98,81 +112,53 @@
 
             <!-- Toolbar -->
             <Grid Grid.Row="0" Padding="12,8" Background="{StaticResource SurfaceBrush}">
-                <StackPanel Orientation="Horizontal">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <Button Content="+ New Terminal"
-                            Click="OnNewTerminalClick"
+                            Command="{Binding NewTerminalPaneCommand}"
+                            IsEnabled="{Binding SelectedProject, Converter={StaticResource NullToBoolConverter}}"
+                            Padding="12,6"
+                            Margin="0,0,8,0" />
+                    <Button Content="Horizontal Split"
+                            Click="OnSplitHorizontalClick"
+                            IsEnabled="{Binding SelectedProject, Converter={StaticResource NullToBoolConverter}}"
+                            Padding="12,6"
+                            Margin="0,0,8,0" />
+                    <Button Content="Vertical Split"
+                            Click="OnSplitVerticalClick"
+                            IsEnabled="{Binding SelectedProject, Converter={StaticResource NullToBoolConverter}}"
                             Padding="12,6" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="{Binding ActivePane.WorkingDirectory}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding ActivePane, Converter={StaticResource NullToVisibilityConverter}}" />
                 </StackPanel>
             </Grid>
 
-            <!-- Terminal Content -->
-            <Grid Grid.Row="1">
-                <ListView x:Name="PanesList"
-                          ItemsSource="{x:Bind ViewModel.Panes}"
-                          SelectedItem="{x:Bind ViewModel.ActivePane, Mode=TwoWay}"
-                          Background="Transparent"
-                          BorderThickness="0">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="#1E1E1E"
-                                    Padding="8"
-                                    Margin="4"
-                                    CornerRadius="4">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*" />
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Tab Header -->
-                                    <Grid Grid.Row="0" Background="#2D2D2D" Padding="8,4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <TextBlock Text="{Binding WorkingDirectory}"
-                                                   FontSize="11"
-                                                   Foreground="{StaticResource TextSecondaryBrush}" />
-
-                                        <Button Grid.Column="1"
-                                                Content="x"
-                                                Width="16"
-                                                Height="16"
-                                                FontSize="10"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Tag="{Binding}"
-                                                Click="OnClosePaneClick" />
-                                    </Grid>
-
-                                    <!-- Terminal Output -->
-                                    <ScrollViewer Grid.Row="1"
-                                                  VerticalScrollBarVisibility="Auto"
-                                                  HorizontalScrollBarVisibility="Auto">
-                                        <TextBlock Text="{Binding TerminalOutput}"
-                                                   FontFamily="Cascadia Code, Consolas"
-                                                   FontSize="12"
-                                                   Foreground="#CCCCCC"
-                                                   TextWrapping="Wrap"
-                                                   Margin="4" />
-                                    </ScrollViewer>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-
+            <!-- Split View Container -->
+            <Grid x:Name="SplitContainer" Grid.Row="1" Background="{StaticResource BackgroundBrush}">
                 <!-- Empty State -->
                 <StackPanel x:Name="EmptyState"
                             VerticalAlignment="Center"
-                            HorizontalAlignment="Center"
-                            Visibility="Collapsed">
-                    <TextBlock Text="No project selected"
-                               FontSize="16"
+                            HorizontalAlignment="Center">
+                    <SymbolIcon Symbol="WindowConsole20"
+                                FontSize="64"
+                                Foreground="{StaticResource TextSecondaryBrush}"
+                                HorizontalAlignment="Center" />
+                    <TextBlock Text="No Terminals Open"
+                               FontSize="18"
                                Foreground="{StaticResource TextSecondaryBrush}"
-                               HorizontalAlignment="Center" />
-                    <TextBlock Text="Select a project or add a new one"
+                               HorizontalAlignment="Center"
+                               Margin="0,16,0,0" />
+                    <TextBlock Text="Select a project and click 'New Terminal' to get started"
                                FontSize="13"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                HorizontalAlignment="Center"

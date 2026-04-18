@@ -26,7 +26,7 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         _projectService = App.Services.GetRequiredService<IProjectService>();
         _terminalService = App.Services.GetRequiredService<ITerminalService>();
-        
+
         _ = LoadProjectsAsync();
     }
 
@@ -34,6 +34,11 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         var projects = await _projectService.GetProjectsAsync();
         Projects = new ObservableCollection<ProjectInfo>(projects);
+
+        if (Projects.Count > 0)
+        {
+            SelectedProject = Projects.First();
+        }
     }
 
     [RelayCommand]
@@ -56,18 +61,37 @@ public partial class WorkspaceViewModel : ObservableObject
     private async Task RemoveProject(ProjectInfo? project)
     {
         if (project == null) return;
-        
+
+        var panesToClose = Panes.Where(p => p.WorkingDirectory.StartsWith(project.Path)).ToList();
+        foreach (var pane in panesToClose)
+        {
+            await ClosePaneInternalAsync(pane);
+        }
+
         await _projectService.RemoveProjectAsync(project.Id);
         Projects.Remove(project);
-        
+
         if (SelectedProject == project)
         {
             SelectedProject = Projects.FirstOrDefault();
         }
     }
 
+    partial void OnSelectedProjectChanged(ProjectInfo? value)
+    {
+        if (value != null && Panes.Count == 0)
+        {
+            _ = NewTerminalPaneInternalAsync();
+        }
+    }
+
     [RelayCommand]
     private async Task NewTerminalPane()
+    {
+        await NewTerminalPaneInternalAsync();
+    }
+
+    private async Task NewTerminalPaneInternalAsync()
     {
         if (SelectedProject == null) return;
 
@@ -83,13 +107,17 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ClosePane(TerminalPaneViewModel? pane)
+    private async Task ClosePane(TerminalPaneViewModel? pane)
     {
         if (pane == null) return;
-        
-        pane.CloseSessionAsync();
+        await ClosePaneInternalAsync(pane);
+    }
+
+    private async Task ClosePaneInternalAsync(TerminalPaneViewModel pane)
+    {
+        await pane.CloseSessionAsync();
         Panes.Remove(pane);
-        
+
         if (ActivePane == pane)
         {
             ActivePane = Panes.FirstOrDefault();
@@ -121,29 +149,38 @@ public partial class TerminalPaneViewModel : ObservableObject
     public async Task CreateSessionAsync()
     {
         if (_sessionCreated) return;
-        
+
         _sessionId = await _terminalService.CreateSessionAsync(WorkingDirectory);
         _sessionCreated = true;
+
+        TerminalOutput = $"PowerShell 7+ - {WorkingDirectory}\n";
+        TerminalOutput += "Type commands below and press Enter to execute.\n";
+        TerminalOutput += "--------------------------------------------\n\n";
     }
 
     public Task CloseSessionAsync()
     {
         if (!_sessionCreated) return Task.CompletedTask;
-        
+
+        _terminalService.OutputReceived -= OnOutputReceived;
         return _terminalService.CloseSessionAsync(_sessionId);
     }
 
     public async Task SendInputAsync(string input)
     {
         if (!_sessionCreated) return;
-        
+
+        TerminalOutput += $"PS> {input}\n";
         await _terminalService.WriteAsync(_sessionId, input);
     }
 
     private void OnOutputReceived(object? sender, TerminalOutputEventArgs e)
     {
         if (e.SessionId != _sessionId) return;
-        
-        TerminalOutput += e.Output;
+
+        Microsoft.UI.Xaml.Application.Current?.DispatcherQueue.TryEnqueue(() =>
+        {
+            TerminalOutput += e.Output;
+        });
     }
 }
