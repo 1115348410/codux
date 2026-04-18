@@ -1,0 +1,93 @@
+<Window
+    x:Class="Codux.WinUI.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Codux.WinUI"
+    xmlns:views="using:Codux.WinUI.Views"
+    Title="Codux"
+    Width="1460"
+    Height="920"
+    MinWidth="800"
+    MinHeight="600"
+    Background="{StaticResource BackgroundBrush}"
+    WindowStartupLocation="CenterScreen">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Sidebar Navigation -->
+        <NavigationView
+            x:Name="NavView"
+            Grid.Column="0"
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            PaneDisplayMode="Left"
+            IsBackButtonVisible="Collapsed"
+            IsPaneToggleVisible="True"
+            Background="{StaticResource SurfaceBrush}">
+
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Workspace" Tag="workspace">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="MultipleWindows24" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Git" Tag="git">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="BranchFork24" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="AI Stats" Tag="ai">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="ChartMultiple24" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem Content="Settings" Tag="settings">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Settings24" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
+
+        </NavigationView>
+
+        <!-- Content Area -->
+        <Grid Grid.Column="1" Grid.Row="0" Background="{StaticResource BackgroundBrush}">
+            <Frame x:Name="ContentFrame" />
+        </Grid>
+
+        <!-- Status Bar -->
+        <Grid Grid.Column="1" Grid.Row="1" Height="24" Background="{StaticResource SurfaceBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock
+                x:Name="StatusText"
+                Grid.Column="0"
+                Text="Ready"
+                Foreground="{StaticResource TextSecondaryBrush}"
+                VerticalAlignment="Center"
+                Margin="12,0" />
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0">
+                <TextBlock
+                    x:Name="ActiveProjectText"
+                    Text=""
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
