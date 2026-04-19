@@ -54,12 +54,46 @@ public class GitService : IGitService
             try
             {
                 using var repo = new Repository(repoPath);
-                var signature = repo.Config.BuildSignature(DateTime.Now);
+                if (repo.RetrieveStatus().IsDirty)
+                {
+                    Commands.Stage(repo, "*");
+                }
+
+                if (!repo.RetrieveStatus().Any(entry =>
+                        entry.State.HasFlag(FileStatus.NewInIndex) ||
+                        entry.State.HasFlag(FileStatus.ModifiedInIndex) ||
+                        entry.State.HasFlag(FileStatus.DeletedFromIndex) ||
+                        entry.State.HasFlag(FileStatus.RenamedInIndex) ||
+                        entry.State.HasFlag(FileStatus.TypeChangeInIndex)))
+                {
+                    return;
+                }
+
+                var signature = repo.Config.BuildSignature(DateTimeOffset.Now)
+                    ?? new Signature("Codux", "codux@local", DateTimeOffset.Now);
                 repo.Commit(message, signature, signature);
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "Failed to commit in {RepoPath}", repoPath);
+                throw;
+            }
+        }, ct);
+    }
+
+    public Task StageAllAsync(string repoPath, CancellationToken ct = default)
+    {
+        return Task.Run(() =>
+        {
+            try
+            {
+                using var repo = new Repository(repoPath);
+                Commands.Stage(repo, "*");
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to stage changes in {RepoPath}", repoPath);
+                throw;
             }
         }, ct);
     }

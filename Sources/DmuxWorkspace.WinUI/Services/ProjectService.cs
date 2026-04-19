@@ -67,4 +67,15 @@ public class ProjectService : IProjectService
         if (_projects.Remove(id)) SaveProjects();
         return Task.CompletedTask;
     }
+
+    public Task TouchProjectAsync(Guid id, CancellationToken ct = default)
+    {
+        if (_projects.TryGetValue(id, out var project))
+        {
+            _projects[id] = project with { LastAccessed = DateTime.Now };
+            SaveProjects();
+        }
+
+        return Task.CompletedTask;
+    }
 }

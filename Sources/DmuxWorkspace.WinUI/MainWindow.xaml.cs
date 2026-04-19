@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Collections.ObjectModel;
+using System.IO;
 using Codux.WinUI.Services;
 using Codux.WinUI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,9 @@ public partial class MainWindow : Window
     private ProjectInfo? _selectedProject;
     private readonly ObservableCollection<ProjectInfo> _projects = new();
     private readonly List<TerminalPaneViewModel> _terminals = new();
+    private readonly Dictionary<TerminalPaneViewModel, List<string>> _terminalInputHistory = new();
+    private readonly Dictionary<TerminalPaneViewModel, int> _terminalInputHistoryIndex = new();
+    private bool _isProjectSelectionInternalUpdate;
 
     public MainWindow()
     {
@@ -52,12 +56,19 @@ public partial class MainWindow : Window
         await RefreshInspectorAsync();
     }
 
-    private void OnProjectSelected(object sender, SelectionChangedEventArgs e)
+    private async void OnProjectSelected(object sender, SelectionChangedEventArgs e)
     {
+        if (_isProjectSelectionInternalUpdate)
+        {
+            return;
+        }
+
         _selectedProject = ProjectsList.SelectedItem as ProjectInfo;
         if (_selectedProject != null)
         {
             ProjectPathText.Text = _selectedProject.Path;
+            await _projectService.TouchProjectAsync(_selectedProject.Id);
+            UpdateProjectLastAccessed(_selectedProject.Id);
         }
 
         _ = RefreshInspectorAsync();
@@ -80,6 +91,8 @@ public partial class MainWindow : Window
         await terminal.CreateSessionAsync();
         terminal.AppendClientOutput($"Session started in {_selectedProject.Path}");
         _terminals.Add(terminal);
+        _terminalInputHistory[terminal] = new List<string>();
+        _terminalInputHistoryIndex[terminal] = 0;
 
         var panel = CreateTerminalPanel(terminal);
         TerminalsContainer.Children.Add(panel);
@@ -113,6 +126,24 @@ public partial class MainWindow : Window
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+    }
+
+    private async void OnRemoveProject(object sender, RoutedEventArgs e)
+    {
+        if (_selectedProject == null)
+        {
+            return;
+        }
+
+        var toRemove = _selectedProject;
+        await _projectService.RemoveProjectAsync(toRemove.Id);
+
+        _projects.Remove(toRemove);
+        _selectedProject = _projects.FirstOrDefault();
+        ProjectsList.SelectedItem = _selectedProject;
+        ProjectPathText.Text = _selectedProject?.Path ?? string.Empty;
+        StatusText.Text = $"Removed project: {toRemove.Name}";
+        await RefreshInspectorAsync();
     }
 
     private Border CreateTerminalPanel(TerminalPaneViewModel terminal)
@@ -261,17 +292,52 @@ public partial class MainWindow : Window
 
     private async void OnInputKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        if (sender is not TextBox textBox || textBox.Tag is not TerminalPaneViewModel terminal)
+        {
+            return;
+        }
+
+        if ((System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) == System.Windows.Input.ModifierKeys.Control &&
+            e.Key == System.Windows.Input.Key.C)
+        {
+            terminal.AppendClientOutput("^C");
+            await terminal.SendInputAsync("\u0003");
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == System.Windows.Input.Key.Up)
+        {
+            NavigateTerminalHistory(textBox, terminal, -1);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == System.Windows.Input.Key.Down)
+        {
+            NavigateTerminalHistory(textBox, terminal, 1);
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == System.Windows.Input.Key.Enter)
         {
-            if (sender is TextBox textBox && textBox.Tag is TerminalPaneViewModel terminal)
-            {
-                var cmd = textBox.Text;
-                textBox.Text = string.Empty;
+            var cmd = textBox.Text;
+            textBox.Text = string.Empty;
 
-                if (!string.IsNullOrWhiteSpace(cmd))
+            if (!string.IsNullOrWhiteSpace(cmd))
+            {
+                terminal.AppendClientOutput(cmd);
+                await terminal.SendInputAsync(cmd);
+
+                if (_terminalInputHistory.TryGetValue(terminal, out var history))
                 {
-                    terminal.AppendClientOutput(cmd);
-                    await terminal.SendInputAsync(cmd);
+                    if (history.Count == 0 || history[^1] != cmd)
+                    {
+                        history.Add(cmd);
+                    }
+
+                    _terminalInputHistoryIndex[terminal] = history.Count;
                 }
             }
             e.Handled = true;
@@ -284,6 +350,8 @@ public partial class MainWindow : Window
         {
             await terminal.CloseAsync();
             _terminals.Remove(terminal);
+            _terminalInputHistory.Remove(terminal);
+            _terminalInputHistoryIndex.Remove(terminal);
 
             foreach (var child in TerminalsContainer.Children.OfType<Border>())
             {
@@ -296,6 +364,51 @@ public partial class MainWindow : Window
 
             StatusText.Text = $"Terminals: {_terminals.Count}";
             await RefreshInspectorAsync();
+        }
+    }
+
+    private async void OnGitStageAll(object sender, RoutedEventArgs e)
+    {
+        if (_selectedProject == null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _gitService.StageAllAsync(_selectedProject.Path);
+            StatusText.Text = "Git: staged all changes";
+            await RefreshInspectorAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to stage changes: {ex.Message}", "Git Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void OnGitCommit(object sender, RoutedEventArgs e)
+    {
+        if (_selectedProject == null)
+        {
+            return;
+        }
+
+        var message = GitCommitMessageTextBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            MessageBox.Show("Please enter a commit message.", "Git Commit", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            await _gitService.CommitAsync(_selectedProject.Path, message);
+            StatusText.Text = "Git: commit completed";
+            await RefreshInspectorAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to commit: {ex.Message}", "Git Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -354,5 +467,61 @@ public partial class MainWindow : Window
             await terminal.CloseAsync();
         }
         _terminals.Clear();
+        _terminalInputHistory.Clear();
+        _terminalInputHistoryIndex.Clear();
+    }
+
+    private void NavigateTerminalHistory(TextBox input, TerminalPaneViewModel terminal, int delta)
+    {
+        if (!_terminalInputHistory.TryGetValue(terminal, out var history) || history.Count == 0)
+        {
+            return;
+        }
+
+        var index = _terminalInputHistoryIndex.TryGetValue(terminal, out var currentIndex)
+            ? currentIndex
+            : history.Count;
+
+        index = Math.Clamp(index + delta, 0, history.Count);
+        _terminalInputHistoryIndex[terminal] = index;
+
+        input.Text = index == history.Count ? string.Empty : history[index];
+        input.CaretIndex = input.Text.Length;
+    }
+
+    private void UpdateProjectLastAccessed(Guid projectId)
+    {
+        var existing = _projects.FirstOrDefault(p => p.Id == projectId);
+        if (existing == null)
+        {
+            return;
+        }
+
+        var index = _projects.IndexOf(existing);
+        if (index < 0)
+        {
+            return;
+        }
+
+        var updated = existing with { LastAccessed = DateTime.Now };
+        _projects[index] = updated;
+        _selectedProject = updated;
+
+        var ordered = _projects.OrderByDescending(p => p.LastAccessed).ToList();
+        _projects.Clear();
+        foreach (var item in ordered)
+        {
+            _projects.Add(item);
+        }
+
+        _isProjectSelectionInternalUpdate = true;
+        try
+        {
+            ProjectsList.SelectedItem = _selectedProject;
+        }
+        finally
+        {
+            _isProjectSelectionInternalUpdate = false;
+        }
     }
 }

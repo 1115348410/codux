@@ -67,6 +67,7 @@
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="16,8">
                 <Button Content="Add Project" Click="OnAddProject" Style="{StaticResource PrimaryButton}"/>
+                <Button Content="Remove" Click="OnRemoveProject" Style="{StaticResource SecondaryButton}"/>
             </StackPanel>
 
             <ListBox Grid.Row="2" x:Name="ProjectsList"
@@ -81,6 +82,10 @@
                             <TextBlock Text="{Binding Path}" FontSize="11"
                                        Foreground="{StaticResource TextSecondary}"
                                         TextTrimming="CharacterEllipsis" MaxWidth="240"/>
+                            <TextBlock Text="{Binding LastAccessed, StringFormat='Last opened {0:yyyy-MM-dd HH:mm}'}"
+                                       FontSize="10"
+                                       Foreground="#8F8F8F"
+                                       Margin="0,3,0,0"/>
                             </StackPanel>
                         </Border>
                     </DataTemplate>
@@ -155,6 +160,8 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
@@ -162,7 +169,21 @@
                             <TextBlock Grid.Row="1" x:Name="GitChangeCountText" Text="0" Foreground="{StaticResource TextPrimary}" FontSize="18" FontWeight="Bold" Margin="0,2,0,8"/>
 
                             <TextBlock Grid.Row="2" Text="Working Tree" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0,0,0,6"/>
-                            <ListBox Grid.Row="3" x:Name="GitChangesList" Background="#191919" Foreground="{StaticResource TextPrimary}" BorderBrush="{StaticResource BorderLine}" BorderThickness="1"/>
+                            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button Content="Stage All" Style="{StaticResource SecondaryButton}" Click="OnGitStageAll"/>
+                                <Button Content="Commit" Style="{StaticResource PrimaryButton}" Click="OnGitCommit"/>
+                            </StackPanel>
+
+                            <TextBox Grid.Row="4" x:Name="GitCommitMessageTextBox"
+                                     Background="#191919"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     BorderBrush="{StaticResource BorderLine}"
+                                     BorderThickness="1"
+                                     Margin="0,0,0,8"
+                                     Padding="8,6"
+                                     Text="chore: update workspace changes"/>
+
+                            <ListBox Grid.Row="5" x:Name="GitChangesList" Background="#191919" Foreground="{StaticResource TextPrimary}" BorderBrush="{StaticResource BorderLine}" BorderThickness="1"/>
                         </Grid>
                     </TabItem>
 
