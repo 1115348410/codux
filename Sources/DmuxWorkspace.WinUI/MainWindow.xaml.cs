@@ -12,6 +12,8 @@ public partial class MainWindow : Window
 {
     private readonly IProjectService _projectService;
     private readonly ITerminalService _terminalService;
+    private readonly IGitService _gitService;
+    private readonly IUsageService _usageService;
     private ProjectInfo? _selectedProject;
     private readonly ObservableCollection<ProjectInfo> _projects = new();
     private readonly List<TerminalPaneViewModel> _terminals = new();
@@ -23,6 +25,8 @@ public partial class MainWindow : Window
 
         _projectService = App.Services.GetRequiredService<IProjectService>();
         _terminalService = App.Services.GetRequiredService<ITerminalService>();
+        _gitService = App.Services.GetRequiredService<IGitService>();
+        _usageService = App.Services.GetRequiredService<IUsageService>();
 
         _ = LoadProjectsAsync();
     }
@@ -44,6 +48,8 @@ public partial class MainWindow : Window
             _selectedProject = _projects.First();
             ProjectPathText.Text = _selectedProject.Path;
         }
+
+        await RefreshInspectorAsync();
     }
 
     private void OnProjectSelected(object sender, SelectionChangedEventArgs e)
@@ -53,6 +59,8 @@ public partial class MainWindow : Window
         {
             ProjectPathText.Text = _selectedProject.Path;
         }
+
+        _ = RefreshInspectorAsync();
     }
 
     private async void OnNewTerminal(object sender, RoutedEventArgs e)
@@ -77,6 +85,7 @@ public partial class MainWindow : Window
         TerminalsContainer.Children.Add(panel);
 
         StatusText.Text = $"Terminals: {_terminals.Count} | {_selectedProject.Path}";
+        await RefreshInspectorAsync();
     }
 
     private async void OnAddProject(object sender, RoutedEventArgs e)
@@ -96,6 +105,7 @@ public partial class MainWindow : Window
                 _selectedProject = project;
                 ProjectPathText.Text = project.Path;
                 StatusText.Text = $"Added project: {project.Name}";
+                await RefreshInspectorAsync();
             }
             catch (Exception ex)
             {
@@ -285,6 +295,54 @@ public partial class MainWindow : Window
             }
 
             StatusText.Text = $"Terminals: {_terminals.Count}";
+            await RefreshInspectorAsync();
+        }
+    }
+
+    private async void OnRefreshInspector(object sender, RoutedEventArgs e)
+    {
+        await RefreshInspectorAsync();
+    }
+
+    private async Task RefreshInspectorAsync()
+    {
+        OverviewSelectedProjectText.Text = _selectedProject?.Path ?? "No project selected";
+        OverviewTerminalCountText.Text = _terminals.Count.ToString();
+
+        if (_selectedProject == null)
+        {
+            GitCurrentBranchText.Text = "-";
+            GitChangeCountText.Text = "0";
+            GitChangesList.ItemsSource = null;
+            UsageTotalTokensText.Text = "0";
+            return;
+        }
+
+        try
+        {
+            if (Directory.Exists(Path.Combine(_selectedProject.Path, ".git")))
+            {
+                var branches = (await _gitService.GetBranchesAsync(_selectedProject.Path)).ToList();
+                var currentBranch = branches.FirstOrDefault(b => !b.IsRemote && b.IsCurrent)?.Name ?? "detached";
+                GitCurrentBranchText.Text = currentBranch;
+
+                var changes = (await _gitService.GetChangesAsync(_selectedProject.Path)).ToList();
+                GitChangeCountText.Text = changes.Count.ToString();
+                GitChangesList.ItemsSource = changes.Select(c => $"[{c.Status}] {c.FilePath}").ToList();
+            }
+            else
+            {
+                GitCurrentBranchText.Text = "Not a git repository";
+                GitChangeCountText.Text = "0";
+                GitChangesList.ItemsSource = new[] { "No repository metadata found." };
+            }
+
+            var totalTokens = await _usageService.GetTotalUsageAsync();
+            UsageTotalTokensText.Text = totalTokens.ToString("N0");
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Inspector refresh failed: {ex.Message}";
         }
     }
 
