@@ -51,16 +51,17 @@ func (rpv *RightPanelView) CreateRenderer() fyne.WidgetRenderer {
 
 // createGitPanel 创建 Git 面板
 func (rpv *RightPanelView) createGitPanel() {
-	infoLabel := widget.NewLabel("未检测到 Git 仓库")
-	infoLabel.Alignment = fyne.TextAlignCenter
-	infoLabel.TextStyle = fyne.TextStyle{Italic: true}
+	// 状态标签
+	statusLabel := widget.NewLabel("未选择项目")
+	statusLabel.TextStyle = fyne.TextStyle{Italic: true}
 
+	// 文件列表
 	fileList := widget.NewList(
 		func() int { return 0 },
 		func() fyne.CanvasObject {
 			return container.NewHBox(
 				widget.NewIcon(theme.DocumentIcon()),
-				widget.NewLabel("file.txt"),
+				widget.NewLabel("file"),
 				layout.NewSpacer(),
 				widget.NewLabel("M"),
 			)
@@ -68,50 +69,107 @@ func (rpv *RightPanelView) createGitPanel() {
 		func(id widget.ListItemID, item fyne.CanvasObject) {},
 	)
 
-	statusBtn := widget.NewButtonWithIcon("刷新状态", theme.ViewRefreshIcon(), func() {
+	// 分支信息
+	branchLabel := widget.NewLabel("Branch: main")
+
+	// 按钮
+	refreshBtn := widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
 		rpv.refreshGitStatus()
 	})
 
-	stageAllBtn := widget.NewButton("全部暂存", func() {})
+	stashBtn := widget.NewButton("Stash", func() {})
+	fetchBtn := widget.NewButton("Fetch", func() {})
+	pullBtn := widget.NewButton("Pull", func() {})
+	pushBtn := widget.NewButton("Push", func() {})
+
+	buttonRow := container.NewHBox(refreshBtn, stashBtn, fetchBtn, pullBtn, pushBtn)
+
+	// 提交信息
 	commitEntry := widget.NewEntry()
 	commitEntry.SetPlaceHolder("提交信息")
 	commitEntry.MultiLine = true
 
 	commitBtn := widget.NewButtonWithIcon("提交", theme.ContentPasteIcon(), func() {
-		if commitEntry.Text != "" {
-			rpv.doCommit(commitEntry.Text)
-			commitEntry.Text = ""
-			commitEntry.Refresh()
-		}
+		rpv.doCommit(commitEntry.Text)
 	})
 
-	form := container.NewVBox(
-		container.NewHBox(statusBtn, stageAllBtn),
+	// 历史记录
+	historyList := widget.NewList(
+		func() int { return 0 },
+		func() fyne.CanvasObject {
+			return container.NewVBox(
+				widget.NewLabel("commit hash"),
+				widget.NewLabel("commit message"),
+			)
+		},
+		func(id widget.ListItemID, item fyne.CanvasObject) {},
+	)
+
+	// 组装面板
+	content := container.NewVBox(
+		container.NewHBox(branchLabel, layout.NewSpacer(), statusLabel),
 		widget.NewSeparator(),
+		buttonRow,
+		widget.NewSeparator(),
+		widget.NewLabel("变更文件"),
 		fileList,
 		widget.NewSeparator(),
 		commitEntry,
 		commitBtn,
+		widget.NewSeparator(),
+		widget.NewLabel("提交历史"),
+		historyList,
 	)
 
-	rpv.gitContent = container.NewVScroll(
-		container.NewBorder(
-			widget.NewLabel("Git 状态"),
-			nil,
-			nil,
-			nil,
-			container.NewVScroll(form),
-		),
-	)
+	rpv.gitContent = container.NewVScroll(content)
 }
 
 // createAIPanel 创建 AI 统计面板
 func (rpv *RightPanelView) createAIPanel() {
-	placeholder := widget.NewLabel("AI 使用统计\n\n启动 AI 工具后会显示 Token 使用情况")
-	placeholder.Alignment = fyne.TextAlignCenter
-	placeholder.TextStyle = fyne.TextStyle{Italic: true}
+	// 今日统计
+	todayStats := widget.NewLabel("今日未使用 AI 工具")
+	todayStats.TextStyle = fyne.TextStyle{Bold: true}
 
-	rpv.aiContent = container.NewCenter(placeholder)
+	// 等级显示
+	levelLabel := widget.NewLabel("等级：Iron")
+	levelLabel.TextStyle = fyne.TextStyle{Bold: true}
+
+	// 进度指示
+	progressContainer := container.NewHBox(
+		widget.NewProgressBar(),
+	)
+
+	// 工具列表
+	toolList := widget.NewList(
+		func() int { return 0 },
+		func() fyne.CanvasObject {
+			return container.NewHBox(
+				widget.NewIcon(theme.ComputerIcon()),
+				widget.NewLabel("Claude Code"),
+				layout.NewSpacer(),
+				widget.NewLabel("0 tokens"),
+			)
+		},
+		func(id widget.ListItemID, item fyne.CanvasObject) {},
+	)
+
+	// 刷新按钮
+	refreshBtn := widget.NewButtonWithIcon("刷新", theme.ViewRefreshIcon(), func() {
+		// TODO: 刷新 AI 统计
+	})
+
+	content := container.NewVBox(
+		container.NewHBox(widget.NewLabel("今日统计"), layout.NewSpacer(), refreshBtn),
+		todayStats,
+		widget.NewSeparator(),
+		levelLabel,
+		progressContainer,
+		widget.NewSeparator(),
+		widget.NewLabel("工具使用"),
+		toolList,
+	)
+
+	rpv.aiContent = container.NewVScroll(content)
 }
 
 // refreshGitStatus 刷新 Git 状态
@@ -126,13 +184,18 @@ func (rpv *RightPanelView) refreshGitStatus() {
 		return
 	}
 
-	// TODO: 更新 UI 显示状态
+	// TODO: 更新 UI
 }
 
 // doCommit 执行提交
 func (rpv *RightPanelView) doCommit(message string) {
 	project := rpv.store.SelectedProject()
 	if project == nil {
+		return
+	}
+
+	if message == "" {
+		dialog.ShowError(nil, rpv.window)
 		return
 	}
 

@@ -17,6 +17,8 @@ type Store struct {
 	settings          *models.AppSettings
 
 	persistence *persist.PersistenceService
+	split       *SplitService
+	terminal    *TerminalService
 }
 
 // NewStore 创建应用 Store
@@ -27,8 +29,10 @@ func NewStore() (*Store, error) {
 	}
 
 	store := &Store{
-		workspaces:  make(map[string]*models.ProjectWorkspace),
-		persistence: ps,
+		workspaces:   make(map[string]*models.ProjectWorkspace),
+		persistence:  ps,
+		split:        NewSplitService(),
+		terminal:     NewTerminalService(),
 	}
 
 	if err := store.loadFromPersistence(); err != nil {
@@ -95,15 +99,13 @@ func (s *Store) AddProject(project *models.Project) error {
 	}
 
 	s.projects = append(s.projects, project)
-
-	// 创建工作区
+	
 	workspace := models.NewProjectWorkspace(project.ID)
 	if err := s.persistence.SaveWorkspace(workspace); err != nil {
 		return err
 	}
 	s.workspaces[project.ID.String()] = workspace
 
-	// 如果是第一个项目，自动选中
 	if len(s.projects) == 1 {
 		s.selectedProjectID = &project.ID
 	}
@@ -139,7 +141,6 @@ func (s *Store) DeleteProject(id models.UUID) error {
 		return err
 	}
 
-	// 从列表中移除
 	newProjects := make([]*models.Project, 0, len(s.projects)-1)
 	for _, p := range s.projects {
 		if p.ID.String() != id.String() {
@@ -147,11 +148,8 @@ func (s *Store) DeleteProject(id models.UUID) error {
 		}
 	}
 	s.projects = newProjects
-
-	// 从工作区中移除
 	delete(s.workspaces, id.String())
 
-	// 如果删除的是当前选中的项目，选择第一个项目
 	if s.selectedProjectID != nil && s.selectedProjectID.String() == id.String() {
 		if len(s.projects) > 0 {
 			s.selectedProjectID = &s.projects[0].ID
@@ -217,7 +215,18 @@ func (s *Store) UpdateSettings(settings *models.AppSettings) error {
 	return s.persistence.SaveSetting("theme", settings.Theme)
 }
 
+// Split 获取分屏服务
+func (s *Store) Split() *SplitService {
+	return s.split
+}
+
+// Terminal 获取终端服务
+func (s *Store) Terminal() *TerminalService {
+	return s.terminal
+}
+
 // Close 关闭 Store
 func (s *Store) Close() error {
+	s.terminal.CloseAll()
 	return s.persistence.Close()
 }

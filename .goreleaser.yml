@@ -1,0 +1,75 @@
+# goreleaser 配置
+project_name: codux
+
+builds:
+  - id: codux-linux
+    binary: codux
+    goos: [linux]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
+
+  - id: codux-darwin
+    binary: Codux.app/Contents/MacOS/codux
+    goos: [darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
+
+  - id: codux-windows
+    binary: codux
+    goos: [windows]
+    goarch: [amd64]
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+
+release:
+  draft: true
+  prerelease: auto
+
+brews:
+  - name: codux
+    tap:
+      owner: duxweb
+      name: homebrew-tap
+    folder: Formula
+    homepage: https://github.com/duxweb/codux
+    description: A native terminal workspace for AI coding tools
+    license: MIT
+
+dockers:
+  - image_templates:
+      - "duxweb/codux:{{ .Tag }}-amd64"
+    goarch: amd64
+
+dockers:
+  - image_templates:
+      - "duxweb/codux:{{ .Tag }}-arm64"
+    goarch: arm64
+
+docker_manifests:
+  - name_template: duxweb/codux:{{ .Tag }}
+    image_templates:
+      - duxweb/codux:{{ .Tag }}-amd64
+      - duxweb/codux:{{ .Tag }}-arm64
