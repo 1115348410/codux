@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Closing += OnWindowClosing;
 
         _projectService = App.Services.GetRequiredService<IProjectService>();
         _terminalService = App.Services.GetRequiredService<ITerminalService>();
@@ -69,6 +70,7 @@ public partial class MainWindow : Window
         };
 
         await terminal.CreateSessionAsync();
+        terminal.AppendClientOutput($"Session started in {_selectedProject.Path}");
         _terminals.Add(terminal);
 
         var panel = CreateTerminalPanel(terminal);
@@ -110,6 +112,8 @@ public partial class MainWindow : Window
             Background = new SolidColorBrush(Color.FromRgb(0x0C, 0x0C, 0x0C)),
             Margin = new Thickness(8),
             Padding = new Thickness(0),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0x2F, 0x2F, 0x2F)),
+            BorderThickness = new Thickness(1),
             Tag = terminal
         };
 
@@ -253,7 +257,12 @@ public partial class MainWindow : Window
             {
                 var cmd = textBox.Text;
                 textBox.Text = string.Empty;
-                await terminal.SendInputAsync(cmd);
+
+                if (!string.IsNullOrWhiteSpace(cmd))
+                {
+                    terminal.AppendClientOutput(cmd);
+                    await terminal.SendInputAsync(cmd);
+                }
             }
             e.Handled = true;
         }
@@ -277,5 +286,15 @@ public partial class MainWindow : Window
 
             StatusText.Text = $"Terminals: {_terminals.Count}";
         }
+    }
+
+    private async void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        var terminals = _terminals.ToList();
+        foreach (var terminal in terminals)
+        {
+            await terminal.CloseAsync();
+        }
+        _terminals.Clear();
     }
 }

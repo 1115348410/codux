@@ -59,6 +59,16 @@ public sealed class TerminalPaneViewModel : INotifyPropertyChanged
         return _terminalService.WriteAsync(_sessionId, input, ct);
     }
 
+    public void AppendClientOutput(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        TerminalOutput += $"> {message}\n";
+    }
+
     public async Task CloseAsync(CancellationToken ct = default)
     {
         if (_sessionId != Guid.Empty)
