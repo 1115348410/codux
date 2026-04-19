@@ -23,8 +23,8 @@ public class WindowsTerminalService : ITerminalService
 
         var startInfo = new ProcessStartInfo
         {
-            FileName = "powershell.exe",
-            Arguments = "-NoLogo -NoExit -Command -",
+            FileName = "cmd.exe",
+            Arguments = "/Q",
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
             RedirectStandardInput = true,
