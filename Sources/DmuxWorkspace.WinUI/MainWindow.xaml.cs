@@ -215,11 +215,11 @@ public partial class MainWindow : Window
         header.Child = headerGrid;
         Grid.SetRow(header, 0);
 
-        // Output area - using TextBox for selectable text
+        // Output area - using TextBox inside ScrollViewer for selectable text with auto-wrap
         var outputScrollViewer = new ScrollViewer
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Background = Brushes.Transparent
         };
 
@@ -229,16 +229,18 @@ public partial class MainWindow : Window
             FontFamily = new FontFamily("Cascadia Code, Consolas, Courier New"),
             FontSize = 13,
             Foreground = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC)),
-            Background = Brushes.Transparent,
+            Background = new SolidColorBrush(Color.FromRgb(0x0C, 0x0C, 0x0C)),
             BorderThickness = new Thickness(0),
             IsReadOnly = true,
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Margin = new Thickness(8, 4, 8, 4),
-            Padding = new Thickness(0)
+            Padding = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Top,
+            MaxWidth = double.PositiveInfinity
         };
+
+        outputScrollViewer.Content = outputTextBox;
 
         terminal.PropertyChanged += (s, e) =>
         {
@@ -252,7 +254,6 @@ public partial class MainWindow : Window
             }
         };
 
-        outputScrollViewer.Content = outputTextBox;
         Grid.SetRow(outputScrollViewer, 1);
 
         // Input area
