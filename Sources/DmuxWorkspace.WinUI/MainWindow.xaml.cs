@@ -104,7 +104,7 @@ public partial class MainWindow : Window
             Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xCC, 0xCC, 0xCC)),
             TextWrapping = TextWrapping.Wrap
         };
-        output.Child = outputText;
+        output.Content = outputText;
         terminal.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(TerminalPaneViewModel.TerminalOutput))
