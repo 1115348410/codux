@@ -2,20 +2,8 @@ namespace Codux.WinUI.Services;
 
 public interface IUsageService
 {
-    Task<IEnumerable<UsageRecord>> GetUsageRecordsAsync(DateTime since, CancellationToken ct = default);
-    Task RecordUsageAsync(UsageRecord record, CancellationToken ct = default);
-    Task<UsageSummary> GetSummaryAsync(DateTime since, CancellationToken ct = default);
+    Task RecordUsageAsync(int inputTokens, int outputTokens, string model, CancellationToken ct = default);
+    Task<int> GetTotalUsageAsync(CancellationToken ct = default);
 }
 
-public record UsageRecord(
-    string Model,
-    int InputTokens,
-    int OutputTokens,
-    DateTime Timestamp,
-    string SessionId);
-
-public record UsageSummary(
-    int TotalInputTokens,
-    int TotalOutputTokens,
-    Dictionary<string, int> TokensByModel,
-    int TotalSessions);
+public record UsageRecord(int InputTokens, int OutputTokens, string Model, DateTime Timestamp);

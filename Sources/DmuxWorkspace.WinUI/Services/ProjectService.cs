@@ -1,5 +1,4 @@
 using Serilog;
-using System.Collections.Concurrent;
 using System.IO;
 using Newtonsoft.Json;
 
@@ -8,9 +7,7 @@ namespace Codux.WinUI.Services;
 public class ProjectService : IProjectService
 {
     private readonly string _dataPath;
-    private readonly ConcurrentDictionary<Guid, ProjectInfo> _projects = new();
-
-    public event EventHandler<ProjectChangedEventArgs>? ProjectChanged;
+    private readonly Dictionary<Guid, ProjectInfo> _projects = new();
 
     public ProjectService()
     {
@@ -29,12 +26,8 @@ public class ProjectService : IProjectService
                 var json = File.ReadAllText(_dataPath);
                 var projects = JsonConvert.DeserializeObject<List<ProjectInfo>>(json);
                 if (projects != null)
-                {
                     foreach (var p in projects)
-                    {
                         _projects[p.Id] = p;
-                    }
-                }
             }
         }
         catch (Exception ex)
@@ -49,7 +42,6 @@ public class ProjectService : IProjectService
         {
             var dir = Path.GetDirectoryName(_dataPath);
             if (dir != null) Directory.CreateDirectory(dir);
-            
             var json = JsonConvert.SerializeObject(_projects.Values.ToList(), Formatting.Indented);
             File.WriteAllText(_dataPath, json);
         }
@@ -60,33 +52,19 @@ public class ProjectService : IProjectService
     }
 
     public Task<IEnumerable<ProjectInfo>> GetProjectsAsync(CancellationToken ct = default)
-    {
-        return Task.FromResult<IEnumerable<ProjectInfo>>(_projects.Values.OrderByDescending(p => p.LastAccessed));
-    }
+        => Task.FromResult<IEnumerable<ProjectInfo>>(_projects.Values.OrderByDescending(p => p.LastAccessed));
 
     public Task<ProjectInfo> AddProjectAsync(string path, CancellationToken ct = default)
     {
-        var project = new ProjectInfo(
-            Guid.NewGuid(),
-            Path.GetFileName(path),
-            path,
-            DateTime.Now);
-
+        var project = new ProjectInfo(Guid.NewGuid(), Path.GetFileName(path), path, DateTime.Now);
         _projects[project.Id] = project;
         SaveProjects();
-        
-        ProjectChanged?.Invoke(this, new ProjectChangedEventArgs(project.Id, ProjectChangeType.Added));
-        
         return Task.FromResult(project);
     }
 
     public Task RemoveProjectAsync(Guid id, CancellationToken ct = default)
     {
-        if (_projects.TryRemove(id, out _))
-        {
-            SaveProjects();
-            ProjectChanged?.Invoke(this, new ProjectChangedEventArgs(id, ProjectChangeType.Removed));
-        }
+        if (_projects.Remove(id)) SaveProjects();
         return Task.CompletedTask;
     }
 }

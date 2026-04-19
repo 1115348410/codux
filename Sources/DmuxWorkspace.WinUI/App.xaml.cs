@@ -1,25 +1,28 @@
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.Windows.AppLifecycle;
+using System.Windows;
 using Serilog;
 using System.IO;
 using Codux.WinUI.Services;
-using Codux.WinUI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Codux.WinUI;
 
 public partial class App : Application
 {
-    private static IServiceProvider? _serviceProvider;
-    public static IServiceProvider Services => _serviceProvider!;
+    public static IServiceProvider Services { get; private set; } = null!;
 
-    public App()
+    protected override void OnStartup(StartupEventArgs e)
     {
         InitializeLogging();
         Log.Information("Codux starting...");
 
-        this.UnhandledException += OnUnhandledException;
+        this.DispatcherUnhandledException += (s, args) =>
+        {
+            Log.Fatal(args.Exception, "Unhandled exception");
+            Log.CloseAndFlush();
+        };
+
+        ConfigureServices();
+        base.OnStartup(e);
     }
 
     private static void InitializeLogging()
@@ -39,42 +42,15 @@ public partial class App : Application
             .CreateLogger();
     }
 
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
-    {
-        ConfigureServices();
-
-        var mainWindow = new MainWindow();
-        mainWindow.Activate();
-
-        Log.Information("Codux launched successfully");
-    }
-
     private static void ConfigureServices()
     {
         var services = new ServiceCollection();
-
-        // Core Services
         services.AddSingleton<ITerminalService, WindowsTerminalService>();
-        services.AddSingleton<INotificationService, ToastNotificationService>();
         services.AddSingleton<IProjectService, ProjectService>();
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<IUsageService, UsageService>();
         services.AddSingleton<ISettingsService, SettingsService>();
-
-        // ViewModels
-        services.AddTransient<MainViewModel>();
-        services.AddTransient<WorkspaceViewModel>();
-        services.AddTransient<SettingsViewModel>();
-        services.AddTransient<GitPanelViewModel>();
-        services.AddTransient<AIStatsViewModel>();
-
-        _serviceProvider = services.BuildServiceProvider();
-    }
-
-    private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
-    {
-        Log.Fatal(e.Exception, "Unhandled exception occurred");
-        Log.CloseAndFlush();
+        Services = services.BuildServiceProvider();
     }
 
     protected override void OnExit(ExitEventArgs e)

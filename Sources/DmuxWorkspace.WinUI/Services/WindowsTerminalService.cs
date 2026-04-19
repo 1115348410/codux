@@ -1,13 +1,11 @@
 using Serilog;
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace Codux.WinUI.Services;
 
 public class WindowsTerminalService : ITerminalService
 {
-    private readonly ConcurrentDictionary<Guid, TerminalSession> _sessions = new();
+    private readonly Dictionary<Guid, Process> _processes = new();
 
     public event EventHandler<TerminalOutputEventArgs>? OutputReceived;
 
@@ -29,90 +27,55 @@ public class WindowsTerminalService : ITerminalService
             StandardErrorEncoding = System.Text.Encoding.UTF8
         };
 
-        var process = new Process { StartInfo = startInfo };
-        var session = new TerminalSession
-        {
-            Id = sessionId,
-            WorkingDirectory = workingDirectory,
-            Process = process
-        };
+        var process = Process.Start(startInfo);
+        if (process == null) throw new Exception("Failed to start process");
+
+        _processes[sessionId] = process;
 
         process.OutputDataReceived += (s, e) =>
         {
             if (e.Data != null)
-            {
-                OutputReceived?.Invoke(this, new TerminalOutputEventArgs
-                {
-                    SessionId = sessionId,
-                    Output = e.Data + Environment.NewLine
-                });
-            }
+                OutputReceived?.Invoke(this, new TerminalOutputEventArgs { SessionId = sessionId, Output = e.Data + "\n" });
         };
 
         process.ErrorDataReceived += (s, e) =>
         {
             if (e.Data != null)
-            {
-                OutputReceived?.Invoke(this, new TerminalOutputEventArgs
-                {
-                    SessionId = sessionId,
-                    Output = "[ERROR] " + e.Data + Environment.NewLine
-                });
-            }
+                OutputReceived?.Invoke(this, new TerminalOutputEventArgs { SessionId = sessionId, Output = "[ERROR] " + e.Data + "\n" });
         };
 
-        process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        _sessions[sessionId] = session;
-        Log.Information("Terminal session created: {SessionId} in {WorkingDirectory}", sessionId, workingDirectory);
-
+        Log.Information("Terminal session created: {SessionId}", sessionId);
         return Task.FromResult(sessionId);
     }
 
     public async Task WriteAsync(Guid sessionId, string input, CancellationToken ct = default)
     {
-        if (_sessions.TryGetValue(sessionId, out var session))
+        if (_processes.TryGetValue(sessionId, out var process) && !process.HasExited)
         {
-            if (!session.Process.HasExited)
-            {
-                await session.Process.StandardInput.WriteLineAsync(input);
-                await session.Process.StandardInput.FlushAsync(ct);
-            }
+            await process.StandardInput.WriteLineAsync(input);
+            await process.StandardInput.FlushAsync(ct);
         }
     }
 
     public Task CloseSessionAsync(Guid sessionId, CancellationToken ct = default)
     {
-        if (_sessions.TryRemove(sessionId, out var session))
+        if (_processes.TryGetValue(sessionId, out var process))
         {
             try
             {
-                if (!session.Process.HasExited)
-                {
-                    session.Process.Kill(entireProcessTree: true);
-                }
-                session.Process.Dispose();
-                Log.Information("Terminal session closed: {SessionId}", sessionId);
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+                process.Dispose();
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "Error closing terminal session: {SessionId}", sessionId);
+                Log.Warning(ex, "Error closing session {SessionId}", sessionId);
             }
+            _processes.Remove(sessionId);
         }
         return Task.CompletedTask;
-    }
-
-    public Task ResizeAsync(Guid sessionId, int width, int height, CancellationToken ct = default)
-    {
-        return Task.CompletedTask;
-    }
-
-    private class TerminalSession
-    {
-        public Guid Id { get; set; }
-        public string WorkingDirectory { get; set; } = string.Empty;
-        public Process Process { get; set; } = null!;
     }
 }

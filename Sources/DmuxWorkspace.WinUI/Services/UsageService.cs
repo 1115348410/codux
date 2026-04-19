@@ -25,10 +25,7 @@ public class UsageService : IUsageService
             {
                 var json = File.ReadAllText(_dataPath);
                 var records = JsonConvert.DeserializeObject<List<UsageRecord>>(json);
-                if (records != null)
-                {
-                    _records.AddRange(records);
-                }
+                if (records != null) _records.AddRange(records);
             }
         }
         catch (Exception ex)
@@ -43,7 +40,6 @@ public class UsageService : IUsageService
         {
             var dir = Path.GetDirectoryName(_dataPath);
             if (dir != null) Directory.CreateDirectory(dir);
-            
             var json = JsonConvert.SerializeObject(_records, Formatting.Indented);
             File.WriteAllText(_dataPath, json);
         }
@@ -53,30 +49,13 @@ public class UsageService : IUsageService
         }
     }
 
-    public Task<IEnumerable<UsageRecord>> GetUsageRecordsAsync(DateTime since, CancellationToken ct = default)
+    public Task RecordUsageAsync(int inputTokens, int outputTokens, string model, CancellationToken ct = default)
     {
-        var records = _records.Where(r => r.Timestamp >= since).OrderByDescending(r => r.Timestamp);
-        return Task.FromResult<IEnumerable<UsageRecord>>(records);
-    }
-
-    public Task RecordUsageAsync(UsageRecord record, CancellationToken ct = default)
-    {
-        _records.Add(record);
+        _records.Add(new UsageRecord(inputTokens, outputTokens, model, DateTime.Now));
         SaveRecords();
         return Task.CompletedTask;
     }
 
-    public Task<UsageSummary> GetSummaryAsync(DateTime since, CancellationToken ct = default)
-    {
-        var filtered = _records.Where(r => r.Timestamp >= since).ToList();
-        
-        var summary = new UsageSummary(
-            filtered.Sum(r => r.InputTokens),
-            filtered.Sum(r => r.OutputTokens),
-            filtered.GroupBy(r => r.Model)
-                    .ToDictionary(g => g.Key, g => g.Sum(r => r.InputTokens + r.OutputTokens)),
-            filtered.Select(r => r.SessionId).Distinct().Count());
-
-        return Task.FromResult(summary);
-    }
+    public Task<int> GetTotalUsageAsync(CancellationToken ct = default)
+        => Task.FromResult(_records.Sum(r => r.InputTokens + r.OutputTokens));
 }

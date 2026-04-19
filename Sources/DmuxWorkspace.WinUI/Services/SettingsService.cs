@@ -41,18 +41,12 @@ public class SettingsService : ISettingsService
             {
                 return JsonConvert.DeserializeObject<T>(value?.ToString() ?? "") ?? defaultValue;
             }
-            catch
-            {
-                return defaultValue;
-            }
+            catch { return defaultValue; }
         }
         return defaultValue;
     }
 
-    public void SetSetting<T>(string key, T value)
-    {
-        _settings[key] = value!;
-    }
+    public void SetSetting<T>(string key, T value) => _settings[key] = value!;
 
     public void Save()
     {
@@ -60,7 +54,6 @@ public class SettingsService : ISettingsService
         {
             var dir = Path.GetDirectoryName(_settingsPath);
             if (dir != null) Directory.CreateDirectory(dir);
-            
             var json = JsonConvert.SerializeObject(_settings, Formatting.Indented);
             File.WriteAllText(_settingsPath, json);
         }
