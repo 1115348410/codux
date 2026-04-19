@@ -59,6 +59,17 @@ public sealed class TerminalPaneViewModel : INotifyPropertyChanged
         return _terminalService.WriteAsync(_sessionId, input, ct);
     }
 
+    public async Task CloseAsync(CancellationToken ct = default)
+    {
+        if (_sessionId != Guid.Empty)
+        {
+            await _terminalService.CloseSessionAsync(_sessionId, ct);
+            _sessionId = Guid.Empty;
+        }
+
+        _terminalService.OutputReceived -= HandleOutputReceived;
+    }
+
     private void HandleOutputReceived(object? sender, TerminalOutputEventArgs e)
     {
         if (e.SessionId != _sessionId)

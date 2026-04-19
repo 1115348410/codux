@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Collections.ObjectModel;
 using Codux.WinUI.Services;
 using Codux.WinUI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,7 @@ public partial class MainWindow : Window
     private readonly IProjectService _projectService;
     private readonly ITerminalService _terminalService;
     private ProjectInfo? _selectedProject;
+    private readonly ObservableCollection<ProjectInfo> _projects = new();
     private readonly List<TerminalPaneViewModel> _terminals = new();
 
     public MainWindow()
@@ -27,12 +29,18 @@ public partial class MainWindow : Window
     private async Task LoadProjectsAsync()
     {
         var projects = await _projectService.GetProjectsAsync();
-        var projectList = projects.ToList();
-        ProjectsList.ItemsSource = projectList;
-        if (projectList.Any())
+        _projects.Clear();
+
+        foreach (var project in projects)
         {
-            ProjectsList.SelectedItem = projectList.First();
-            _selectedProject = projectList.First();
+            _projects.Add(project);
+        }
+
+        ProjectsList.ItemsSource = _projects;
+        if (_projects.Any())
+        {
+            ProjectsList.SelectedItem = _projects.First();
+            _selectedProject = _projects.First();
             ProjectPathText.Text = _selectedProject.Path;
         }
     }
@@ -69,7 +77,7 @@ public partial class MainWindow : Window
         StatusText.Text = $"Terminals: {_terminals.Count} | {_selectedProject.Path}";
     }
 
-    private void OnAddProject(object sender, RoutedEventArgs e)
+    private async void OnAddProject(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
@@ -80,10 +88,8 @@ public partial class MainWindow : Window
         {
             try
             {
-                var project = _projectService.AddProjectAsync(dialog.FolderName).Result;
-                var projectList = ((List<ProjectInfo>)ProjectsList.ItemsSource);
-                projectList.Add(project);
-                ProjectsList.Items.Refresh();
+                var project = await _projectService.AddProjectAsync(dialog.FolderName);
+                _projects.Add(project);
                 ProjectsList.SelectedItem = project;
                 _selectedProject = project;
                 ProjectPathText.Text = project.Path;
@@ -253,10 +259,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnCloseTerminal(object sender, RoutedEventArgs e)
+    private async void OnCloseTerminal(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is TerminalPaneViewModel terminal)
         {
+            await terminal.CloseAsync();
             _terminals.Remove(terminal);
 
             foreach (var child in TerminalsContainer.Children.OfType<Border>())

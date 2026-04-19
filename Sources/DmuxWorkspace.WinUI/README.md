@@ -4,11 +4,11 @@
 
 ## 项目状态
 
-**此项目正在开发中** - 这是 macOS 版 Codux 的 Windows (WinUI 3) 移植版本。
+**此项目正在开发中** - 这是 macOS 版 Codux 的 Windows (WPF) 移植版本。
 
 ## 技术栈
 
-- **UI 框架**: WinUI 3 (Windows App SDK)
+- **UI 框架**: WPF
 - **语言**: C# (.NET 8)
 - **架构**: MVVM
 - **终端**: ConPTY (Windows Pseudo Console)
