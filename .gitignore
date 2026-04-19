@@ -1,19 +1,42 @@
-.build/
-.DS_Store
-dist/
-.claude
-.ruff_cache
-.swiftpm
-/plan/
+# Binaries
+codux
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-# Xcode user state
-DerivedData/
-.xcode-derive/
-.xcode-release/
-.xcode-release-*/
-.xcode-check/
-.xcode-check-*/
-.xcode-dev/
-*.xcuserstate
-*.xcworkspace/xcuserdata/
-*.xcodeproj/xcuserdata/
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+
+# Database
+*.db
+
+# Config
+config.yaml
+.env

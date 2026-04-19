@@ -4,7 +4,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/duxweb/codux/internal/app"
@@ -45,7 +44,6 @@ func (sv *SidebarView) CreateRenderer() fyne.WidgetRenderer {
 			return len(sv.projects)
 		},
 		func() fyne.CanvasObject {
-			// 创建列表项容器
 			icon := widget.NewIcon(theme.FolderIcon())
 			name := widget.NewLabel("Project Name")
 			name.TextStyle = fyne.TextStyle{Bold: true}
@@ -81,17 +79,26 @@ func (sv *SidebarView) CreateRenderer() fyne.WidgetRenderer {
 		}
 	}
 
-	// 添加项目按钮
-	addBtn := widget.NewButtonWithIcon("添加项目", theme.ContentAddIcon(), func() {
-		sv.showAddProjectDialog()
-	})
+	// 底部按钮
+	btnContainer := container.NewVBox(
+		widget.NewButtonWithIcon("添加项目", theme.ContentAddIcon(), func() {
+			sv.showAddProjectDialog()
+		}),
+		widget.NewButtonWithIcon("编辑", theme.SettingsIcon(), func() {
+			sv.showEditProjectDialog()
+		}),
+		widget.NewButtonWithIcon("删除", theme.DeleteIcon(), func() {
+			sv.showDeleteConfirmDialog()
+		}),
+	)
 
 	// 垂直布局
-	content := container.NewVBox(
+	content := container.NewBorder(
 		header,
+		btnContainer,
+		nil,
+		nil,
 		sv.projectList,
-		layout.NewSpacer(),
-		addBtn,
 	)
 
 	return widget.NewSimpleRenderer(content)
@@ -122,7 +129,6 @@ func (sv *SidebarView) showAddProjectDialog() {
 	pathEntry := widget.NewEntry()
 	pathEntry.SetPlaceHolder("/path/to/project")
 
-	// 目录选择按钮
 	browseBtn := widget.NewButtonWithIcon("浏览...", theme.FolderOpenIcon(), func() {
 		d := dialog.NewFolderOpen(func(f fyne.ListableURI, err error) {
 			if err != nil {
@@ -151,4 +157,70 @@ func (sv *SidebarView) showAddProjectDialog() {
 		}
 	}, sv.window)
 	d.Show()
+}
+
+// showEditProjectDialog 显示编辑项目对话框
+func (sv *SidebarView) showEditProjectDialog() {
+	if sv.selectedID == nil {
+		dialog.ShowError(nil, sv.window)
+		return
+	}
+
+	project := sv.store.SelectedProject()
+	if project == nil {
+		return
+	}
+
+	nameEntry := widget.NewEntry()
+	nameEntry.Text = project.Name
+
+	pathEntry := widget.NewEntry()
+	pathEntry.Text = project.Path
+
+	browseBtn := widget.NewButtonWithIcon("浏览...", theme.FolderOpenIcon(), func() {
+		d := dialog.NewFolderOpen(func(f fyne.ListableURI, err error) {
+			if err != nil {
+				return
+			}
+			if f != nil {
+				pathEntry.SetText(f.Path())
+			}
+		}, sv.window)
+		d.Show()
+	})
+
+	formItems := []*widget.FormItem{
+		widget.NewFormItem("名称", nameEntry),
+		widget.NewFormItem("路径", container.NewHBox(pathEntry, browseBtn)),
+	}
+
+	d := dialog.NewForm("编辑项目", "取消", "保存", formItems, func(confirmed bool) {
+		if confirmed {
+			project.Name = nameEntry.Text
+			project.Path = pathEntry.Text
+			sv.store.UpdateProject(project)
+			sv.Refresh()
+		}
+	}, sv.window)
+	d.Show()
+}
+
+// showDeleteConfirmDialog 显示删除确认对话框
+func (sv *SidebarView) showDeleteConfirmDialog() {
+	if sv.selectedID == nil {
+		dialog.ShowError(nil, sv.window)
+		return
+	}
+
+	project := sv.store.SelectedProject()
+	if project == nil {
+		return
+	}
+
+	dialog.ShowConfirm("删除项目", "确定要删除项目 \""+project.Name+"\" 吗？\n\n此操作不会删除项目文件。", func(ok bool) {
+		if ok {
+			sv.store.DeleteProject(project.ID)
+			sv.Refresh()
+		}
+	}, sv.window)
 }

@@ -4,6 +4,7 @@ go 1.25.6
 
 require (
 	fyne.io/fyne/v2 v2.7.3
+	github.com/creack/pty v1.1.24
 	github.com/google/uuid v1.6.0
 	modernc.org/sqlite v1.49.1
 )

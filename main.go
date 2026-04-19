@@ -4,13 +4,14 @@ import (
 	"fyne.io/fyne/v2"
 	fyneApp "fyne.io/fyne/v2/app"
 	"github.com/duxweb/codux/internal/app"
+	"github.com/duxweb/codux/internal/ui/menu"
 	coduxtheme "github.com/duxweb/codux/internal/ui/theme"
 	"github.com/duxweb/codux/internal/ui/views"
 )
 
 func main() {
 	// 创建 Fyne 应用
-	a := fyneApp.New()
+	a := fyneApp.NewWithID("io.github.duxweb.codux")
 
 	// 创建自定义主题
 	coduxTheme := coduxtheme.NewCoduxTheme()
@@ -26,6 +27,10 @@ func main() {
 
 	// 创建主窗口
 	w := a.NewWindow("Codux")
+
+	// 设置菜单栏
+	mainMenu := menu.NewAppMenu(a)
+	w.SetMainMenu(mainMenu)
 
 	// 创建主视图
 	mainView := views.NewMainView(w, store)
