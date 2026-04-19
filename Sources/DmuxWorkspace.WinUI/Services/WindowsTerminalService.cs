@@ -1,5 +1,6 @@
 using Serilog;
 using System.Diagnostics;
+using System.IO;
 
 namespace Codux.WinUI.Services;
 
@@ -13,10 +14,17 @@ public class WindowsTerminalService : ITerminalService
     {
         var sessionId = Guid.NewGuid();
 
+        workingDirectory = workingDirectory.Trim();
+        if (!Directory.Exists(workingDirectory))
+        {
+            Log.Warning("Directory does not exist: {WorkingDirectory}, using user profile", workingDirectory);
+            workingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        }
+
         var startInfo = new ProcessStartInfo
         {
-            FileName = "powershell.exe",
-            Arguments = "-NoLogo -NoExit -Command -",
+            FileName = "cmd.exe",
+            Arguments = "/Q",
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
             RedirectStandardInput = true,
@@ -27,9 +35,7 @@ public class WindowsTerminalService : ITerminalService
             StandardErrorEncoding = System.Text.Encoding.UTF8
         };
 
-        var process = Process.Start(startInfo);
-        if (process == null) throw new Exception("Failed to start process");
-
+        var process = new Process { StartInfo = startInfo };
         _processes[sessionId] = process;
 
         process.OutputDataReceived += (s, e) =>
@@ -44,10 +50,11 @@ public class WindowsTerminalService : ITerminalService
                 OutputReceived?.Invoke(this, new TerminalOutputEventArgs { SessionId = sessionId, Output = "[ERROR] " + e.Data + "\n" });
         };
 
+        process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        Log.Information("Terminal session created: {SessionId}", sessionId);
+        Log.Information("Terminal session created: {SessionId} in {WorkingDirectory}", sessionId, workingDirectory);
         return Task.FromResult(sessionId);
     }
 
