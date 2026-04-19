@@ -1,6 +1,7 @@
 using Serilog;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace Codux.WinUI.Services;
 
@@ -31,8 +32,8 @@ public class WindowsTerminalService : ITerminalService
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true,
-            StandardOutputEncoding = System.Text.Encoding.UTF8,
-            StandardErrorEncoding = System.Text.Encoding.UTF8
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8
         };
 
         var process = new Process { StartInfo = startInfo };
@@ -41,18 +42,27 @@ public class WindowsTerminalService : ITerminalService
         process.OutputDataReceived += (s, e) =>
         {
             if (e.Data != null)
+            {
                 OutputReceived?.Invoke(this, new TerminalOutputEventArgs { SessionId = sessionId, Output = e.Data + "\n" });
+            }
         };
 
         process.ErrorDataReceived += (s, e) =>
         {
             if (e.Data != null)
+            {
                 OutputReceived?.Invoke(this, new TerminalOutputEventArgs { SessionId = sessionId, Output = "[ERROR] " + e.Data + "\n" });
+            }
         };
 
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
+
+        // Send initial prompt command to show working directory
+        var initCmd = $"@echo off & cd /d \"{workingDirectory}\" & prompt $G$S & echo.\r\n";
+        process.StandardInput.Write(initCmd);
+        process.StandardInput.Flush();
 
         Log.Information("Terminal session created: {SessionId} in {WorkingDirectory}", sessionId, workingDirectory);
         return Task.FromResult(sessionId);
@@ -62,7 +72,9 @@ public class WindowsTerminalService : ITerminalService
     {
         if (_processes.TryGetValue(sessionId, out var process) && !process.HasExited)
         {
-            await process.StandardInput.WriteLineAsync(input);
+            // Wrap command in cmd.exe format
+            var cmd = input + "\r\n";
+            await process.StandardInput.WriteAsync(cmd);
             await process.StandardInput.FlushAsync(ct);
         }
     }
