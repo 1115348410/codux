@@ -25,7 +25,7 @@ public class WindowsTerminalService : ITerminalService
         var startInfo = new ProcessStartInfo
         {
             FileName = "cmd.exe",
-            Arguments = "/Q",
+            Arguments = "",
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
             RedirectStandardInput = true,
@@ -56,13 +56,17 @@ public class WindowsTerminalService : ITerminalService
         };
 
         process.Start();
+
+        // Give cmd.exe time to initialize
+        System.Threading.Thread.Sleep(100);
+
+        // Initialize cmd with proper settings
+        process.StandardInput.WriteLine("@echo off");
+        process.StandardInput.WriteLine($"cd /d \"{workingDirectory}\"");
+        process.StandardInput.Flush();
+
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-
-        // Send initial prompt command to show working directory
-        var initCmd = $"@echo off & cd /d \"{workingDirectory}\" & prompt $G$S & echo.\r\n";
-        process.StandardInput.Write(initCmd);
-        process.StandardInput.Flush();
 
         Log.Information("Terminal session created: {SessionId} in {WorkingDirectory}", sessionId, workingDirectory);
         return Task.FromResult(sessionId);
@@ -72,9 +76,8 @@ public class WindowsTerminalService : ITerminalService
     {
         if (_processes.TryGetValue(sessionId, out var process) && !process.HasExited)
         {
-            // Wrap command in cmd.exe format
-            var cmd = input + "\r\n";
-            await process.StandardInput.WriteAsync(cmd);
+            // Send command followed by newline
+            await process.StandardInput.WriteLineAsync(input);
             await process.StandardInput.FlushAsync(ct);
         }
     }
