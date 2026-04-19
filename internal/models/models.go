@@ -53,11 +53,6 @@ func (u *UUID) UnmarshalJSON(data []byte) error {
 	return u.UnmarshalText([]byte(s))
 }
 
-// UUID 包装类型
-type UUID struct {
-	uuid.UUID
-}
-
 // NewProject 创建新项目
 func NewProject(name, path string) *Project {
 	return &Project{

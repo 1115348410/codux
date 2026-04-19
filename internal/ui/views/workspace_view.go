@@ -4,18 +4,21 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
+	"github.com/duxweb/codux/internal/app"
 )
 
 // WorkspaceView 工作区视图
 type WorkspaceView struct {
 	widget.BaseWidget
 	window fyne.Window
+	store  *app.Store
 }
 
 // NewWorkspaceView 创建工作区视图
-func NewWorkspaceView(window fyne.Window) *WorkspaceView {
+func NewWorkspaceView(window fyne.Window, store *app.Store) *WorkspaceView {
 	wv := &WorkspaceView{
 		window: window,
+		store:  store,
 	}
 	wv.ExtendBaseWidget(wv)
 	return wv
@@ -31,4 +34,9 @@ func (wv *WorkspaceView) CreateRenderer() fyne.WidgetRenderer {
 	content := container.NewCenter(emptyState)
 
 	return widget.NewSimpleRenderer(content)
+}
+
+// Refresh 刷新视图
+func (wv *WorkspaceView) Refresh() {
+	// TODO: 根据选中的项目更新工作区
 }

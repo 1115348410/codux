@@ -4,12 +4,14 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
+	"github.com/duxweb/codux/internal/app"
 )
 
 // MainView 主视图
 type MainView struct {
 	widget.BaseWidget
 	window     fyne.Window
+	store      *app.Store
 	sidebar    *SidebarView
 	workspace  *WorkspaceView
 	rightPanel *RightPanelView
@@ -17,9 +19,10 @@ type MainView struct {
 }
 
 // NewMainView 创建主视图
-func NewMainView(window fyne.Window) *MainView {
+func NewMainView(window fyne.Window, store *app.Store) *MainView {
 	mv := &MainView{
 		window: window,
+		store:  store,
 	}
 	mv.ExtendBaseWidget(mv)
 	return mv
@@ -28,13 +31,13 @@ func NewMainView(window fyne.Window) *MainView {
 // CreateRenderer 实现 fyne.Widget 接口
 func (mv *MainView) CreateRenderer() fyne.WidgetRenderer {
 	// 创建侧边栏
-	mv.sidebar = NewSidebarView(mv.window)
+	mv.sidebar = NewSidebarView(mv.window, mv.store)
 
 	// 创建工作区
-	mv.workspace = NewWorkspaceView(mv.window)
+	mv.workspace = NewWorkspaceView(mv.window, mv.store)
 
 	// 创建右侧面板
-	mv.rightPanel = NewRightPanelView(mv.window)
+	mv.rightPanel = NewRightPanelView(mv.window, mv.store)
 
 	// 创建状态栏
 	mv.statusBar = widget.NewLabel("就绪")
@@ -48,15 +51,6 @@ func (mv *MainView) CreateRenderer() fyne.WidgetRenderer {
 
 	// 设置侧边栏比例
 	mainContent.SetOffset(0.15)
-
-	// 获取右侧面板的引用以设置比例
-	if rightSplit, ok := mainContent.Trailing.(*fyne.Container); ok {
-		if innerSplit, ok := rightSplit.Objects[0].(*fyne.Container); ok {
-			if split, ok := innerSplit.Objects[0].(*container.Split); ok {
-				split.SetOffset(0.7)
-			}
-		}
-	}
 
 	// 垂直布局 (主内容 + 状态栏)
 	content := container.NewBorder(
@@ -73,4 +67,14 @@ func (mv *MainView) CreateRenderer() fyne.WidgetRenderer {
 // SetStatus 设置状态栏消息
 func (mv *MainView) SetStatus(message string) {
 	mv.statusBar.SetText(message)
+}
+
+// Refresh 刷新视图
+func (mv *MainView) Refresh() {
+	if mv.sidebar != nil {
+		mv.sidebar.Refresh()
+	}
+	if mv.workspace != nil {
+		mv.workspace.Refresh()
+	}
 }
