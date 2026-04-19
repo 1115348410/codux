@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codux - AI Terminal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-terminal: #0c0c0c;
+            --border: #3c3c3c;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --accent: #0078d4;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            min-width: 200px;
+            max-width: 400px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            padding: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .sidebar-actions {
+            padding: 12px 16px;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .projects-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .project-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+        
+        .project-item:hover {
+            background: var(--bg-primary);
+        }
+        
+        .project-item.selected {
+            background: var(--accent);
+        }
+        
+        .project-name {
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .project-path {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        
+        .toolbar {
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .toolbar-path {
+            color: var(--text-secondary);
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .terminals-container {
+            flex: 1;
+            padding: 8px;
+            overflow-y: auto;
+            background: var(--bg-terminal);
+        }
+        
+        .terminal-panel {
+            background: var(--bg-terminal);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        
+        .terminal-header {
+            background: var(--bg-secondary);
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .terminal-path {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .terminal-output {
+            padding: 12px;
+            font-family: 'Cascadia Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--text-secondary);
+        }
+        
+        .terminal-input-container {
+            background: var(--bg-secondary);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .terminal-prompt {
+            color: var(--accent);
+            margin-right: 8px;
+            font-family: 'Cascadia Code', 'Consolas', monospace;
+        }
+        
+        .terminal-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: 'Cascadia Code', 'Consolas', monospace;
+            font-size: 13px;
+            outline: none;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            height: 24px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #106ebe;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        /* Empty state */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .empty-state-text {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .empty-state-hint {
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar">
+            <div class="sidebar-header">Codux</div>
+            <div class="sidebar-actions">
+                <button class="btn btn-primary" id="addProjectBtn">+ Add Project</button>
+            </div>
+            <div class="projects-list" id="projectsList"></div>
+        </div>
+        <div class="main-content">
+            <div class="toolbar">
+                <button class="btn btn-primary" id="newTerminalBtn">+ New Terminal</button>
+                <span class="toolbar-path" id="currentPath"></span>
+            </div>
+            <div class="terminals-container" id="terminalsContainer">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-state-icon">&#x1f4c4;</div>
+                    <div class="empty-state-text">No Terminals Open</div>
+                    <div class="empty-state-hint">Select a project and click 'New Terminal' to get started</div>
+                </div>
+            </div>
+            <div class="status-bar" id="statusBar">Ready</div>
+        </div>
+    </div>
+    
+    <script>
+        const { invoke } = window.__TAURI__.core;
+        
+        let projects = [];
+        let terminals = [];
+        let selectedProject = null;
+        
+        async function loadProjects() {
+            try {
+                projects = await invoke('get_projects');
+                renderProjects();
+            } catch (e) {
+                console.error('Failed to load projects:', e);
+            }
+        }
+        
+        async function addProject() {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Enter project path (e.g., C:\\Projects\\MyApp)';
+            input.style.width = '100%';
+            input.style.padding = '8px';
+            input.style.marginBottom = '8px';
+            
+            const path = prompt('Enter project path:');
+            if (!path) return;
+            
+            try {
+                const project = await invoke('add_project', { path });
+                projects.push(project);
+                renderProjects();
+                selectProject(project);
+                setStatus(`Added project: ${project.name}`);
+            } catch (e) {
+                alert(`Failed to add project: ${e}`);
+            }
+        }
+        
+        function renderProjects() {
+            const list = document.getElementById('projectsList');
+            list.innerHTML = projects.map(p => `
+                <div class="project-item ${selectedProject?.id === p.id ? 'selected' : ''}" 
+                     data-id="${p.id}">
+                    <div class="project-name">${p.name}</div>
+                    <div class="project-path">${p.path}</div>
+                </div>
+            `).join('');
+            
+            list.querySelectorAll('.project-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const project = projects.find(p => p.id === item.dataset.id);
+                    selectProject(project);
+                });
+            });
+        }
+        
+        function selectProject(project) {
+            selectedProject = project;
+            document.getElementById('currentPath').textContent = project?.path || '';
+            renderProjects();
+        }
+        
+        async function createTerminal() {
+            if (!selectedProject) {
+                alert('Please select a project first');
+                return;
+            }
+            
+            try {
+                const id = await invoke('create_terminal', { 
+                    workingDir: selectedProject.path 
+                });
+                
+                const terminal = { id, workingDir: selectedProject.path, output: '' };
+                terminals.push(terminal);
+                renderTerminals();
+                startOutputPolling(id);
+                setStatus(`Terminal created: ${terminals.length} terminals`);
+            } catch (e) {
+                console.error('Failed to create terminal:', e);
+                alert(`Failed to create terminal: ${e}`);
+            }
+        }
+        
+        function renderTerminals() {
+            const container = document.getElementById('terminalsContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (terminals.length === 0) {
+                emptyState.style.display = 'flex';
+                container.innerHTML = '';
+                container.appendChild(emptyState);
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            container.innerHTML = terminals.map(t => `
+                <div class="terminal-panel" data-id="${t.id}">
+                    <div class="terminal-header">
+                        <span class="terminal-path">${t.workingDir}</span>
+                        <button class="close-btn" onclick="closeTerminal('${t.id}')">X</button>
+                    </div>
+                    <div class="terminal-output" id="output-${t.id}">${t.output || 'Terminal ready...\n'}</div>
+                    <div class="terminal-input-container">
+                        <span class="terminal-prompt">></span>
+                        <input type="text" class="terminal-input" 
+                               placeholder="Type command and press Enter..."
+                               onkeydown="handleInput(event, '${t.id}')">
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function handleInput(event, terminalId) {
+            if (event.key === 'Enter') {
+                const input = event.target;
+                const command = input.value.trim();
+                if (!command) return;
+                
+                input.value = '';
+                
+                try {
+                    await invoke('write_terminal', { id: terminalId, input: command });
+                } catch (e) {
+                    console.error('Failed to write to terminal:', e);
+                }
+            }
+        }
+        
+        async function closeTerminal(terminalId) {
+            try {
+                await invoke('close_terminal', { id: terminalId });
+                terminals = terminals.filter(t => t.id !== terminalId);
+                renderTerminals();
+                setStatus(`Terminal closed: ${terminals.length} remaining`);
+            } catch (e) {
+                console.error('Failed to close terminal:', e);
+            }
+        }
+        
+        async function startOutputPolling(terminalId) {
+            const poll = async () => {
+                const terminal = terminals.find(t => t.id === terminalId);
+                if (!terminal) return;
+                
+                try {
+                    const output = await invoke('read_terminal_output', { id: terminalId });
+                    const outputEl = document.getElementById(`output-${terminalId}`);
+                    if (outputEl && output !== terminal.output) {
+                        terminal.output = output;
+                        outputEl.textContent = output;
+                        outputEl.scrollTop = outputEl.scrollHeight;
+                    }
+                } catch (e) {
+                    // Terminal might be closed
+                }
+                
+                if (terminals.find(t => t.id === terminalId)) {
+                    setTimeout(poll, 100);
+                }
+            };
+            
+            poll();
+        }
+        
+        function setStatus(text) {
+            document.getElementById('statusBar').textContent = text;
+        }
+        
+        document.getElementById('addProjectBtn').addEventListener('click', addProject);
+        document.getElementById('newTerminalBtn').addEventListener('click', createTerminal);
+        
+        loadProjects();
+    </script>
+</body>
+</html>
