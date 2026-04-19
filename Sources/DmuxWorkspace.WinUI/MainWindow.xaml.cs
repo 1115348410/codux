@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Collections.ObjectModel;
 using Codux.WinUI.Services;
 using Codux.WinUI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,7 @@ public partial class MainWindow : Window
     private readonly IProjectService _projectService;
     private readonly ITerminalService _terminalService;
     private ProjectInfo? _selectedProject;
+    private readonly ObservableCollection<ProjectInfo> _projects = new();
     private readonly List<TerminalPaneViewModel> _terminals = new();
 
     public MainWindow()
@@ -26,10 +28,17 @@ public partial class MainWindow : Window
     private async Task LoadProjectsAsync()
     {
         var projects = await _projectService.GetProjectsAsync();
-        ProjectsList.ItemsSource = projects;
-        if (projects.Any())
+        _projects.Clear();
+
+        foreach (var project in projects)
         {
-            ProjectsList.SelectedItem = projects.First();
+            _projects.Add(project);
+        }
+
+        ProjectsList.ItemsSource = _projects;
+        if (_projects.Any())
+        {
+            ProjectsList.SelectedItem = _projects.First();
         }
     }
 
@@ -56,14 +65,13 @@ public partial class MainWindow : Window
         StatusText.Text = $"Terminals: {_terminals.Count}";
     }
 
-    private void OnAddProject(object sender, RoutedEventArgs e)
+    private async void OnAddProject(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Select Project Folder" };
         if (dialog.ShowDialog() == true)
         {
-            var project = _projectService.AddProjectAsync(dialog.FolderName).Result;
-            ((List<ProjectInfo>)ProjectsList.ItemsSource).Add(project);
-            ProjectsList.Items.Refresh();
+            var project = await _projectService.AddProjectAsync(dialog.FolderName);
+            _projects.Add(project);
             ProjectsList.SelectedItem = project;
         }
     }
