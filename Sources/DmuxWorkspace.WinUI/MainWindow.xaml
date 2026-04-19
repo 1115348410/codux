@@ -106,6 +106,7 @@
                 <DockPanel>
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                         <Button Content="New Terminal" Click="OnNewTerminal" Style="{StaticResource PrimaryButton}"/>
+                        <Button Content="Rename Terminal" Click="OnRenameTerminal" Style="{StaticResource SecondaryButton}"/>
                     </StackPanel>
                     <TextBlock x:Name="ProjectPathText"
                                VerticalAlignment="Center"
@@ -116,11 +117,7 @@
             </Border>
 
             <Border Grid.Row="1" Margin="12,0,12,8" Background="#0F0F0F" BorderBrush="{StaticResource BorderLine}" BorderThickness="1" CornerRadius="6">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Auto"
-                              Background="Transparent">
-                    <StackPanel x:Name="TerminalsContainer" Margin="6"/>
-                </ScrollViewer>
+                <TabControl x:Name="TerminalsTabControl" Margin="6" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"/>
             </Border>
         </Grid>
 
@@ -171,6 +168,8 @@
                             <TextBlock Grid.Row="2" Text="Working Tree" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0,0,0,6"/>
                             <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,8">
                                 <Button Content="Stage All" Style="{StaticResource SecondaryButton}" Click="OnGitStageAll"/>
+                                <Button Content="Stage Selected" Style="{StaticResource SecondaryButton}" Click="OnGitStageSelected"/>
+                                <Button Content="Unstage Selected" Style="{StaticResource SecondaryButton}" Click="OnGitUnstageSelected"/>
                                 <Button Content="Commit" Style="{StaticResource PrimaryButton}" Click="OnGitCommit"/>
                             </StackPanel>
 
@@ -183,7 +182,13 @@
                                      Padding="8,6"
                                      Text="chore: update workspace changes"/>
 
-                            <ListBox Grid.Row="5" x:Name="GitChangesList" Background="#191919" Foreground="{StaticResource TextPrimary}" BorderBrush="{StaticResource BorderLine}" BorderThickness="1"/>
+                            <ListBox Grid.Row="5" x:Name="GitChangesList" SelectionMode="Extended" Background="#191919" Foreground="{StaticResource TextPrimary}" BorderBrush="{StaticResource BorderLine}" BorderThickness="1">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Label}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                         </Grid>
                     </TabItem>
 

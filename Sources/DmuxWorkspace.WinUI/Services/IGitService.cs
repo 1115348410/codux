@@ -5,6 +5,8 @@ public interface IGitService
     Task<IEnumerable<GitBranch>> GetBranchesAsync(string repoPath, CancellationToken ct = default);
     Task<IEnumerable<GitChange>> GetChangesAsync(string repoPath, CancellationToken ct = default);
     Task StageAllAsync(string repoPath, CancellationToken ct = default);
+    Task StageFilesAsync(string repoPath, IEnumerable<string> filePaths, CancellationToken ct = default);
+    Task UnstageFilesAsync(string repoPath, IEnumerable<string> filePaths, CancellationToken ct = default);
     Task CommitAsync(string repoPath, string message, CancellationToken ct = default);
 }
 

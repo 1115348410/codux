@@ -20,7 +20,10 @@ public partial class MainWindow : Window
     private readonly List<TerminalPaneViewModel> _terminals = new();
     private readonly Dictionary<TerminalPaneViewModel, List<string>> _terminalInputHistory = new();
     private readonly Dictionary<TerminalPaneViewModel, int> _terminalInputHistoryIndex = new();
+    private readonly Dictionary<TerminalPaneViewModel, TabItem> _terminalTabs = new();
+    private readonly Dictionary<TerminalPaneViewModel, string> _terminalTitles = new();
     private bool _isProjectSelectionInternalUpdate;
+    private int _terminalSequence;
 
     public MainWindow()
     {
@@ -93,9 +96,19 @@ public partial class MainWindow : Window
         _terminals.Add(terminal);
         _terminalInputHistory[terminal] = new List<string>();
         _terminalInputHistoryIndex[terminal] = 0;
+        _terminalSequence += 1;
+        _terminalTitles[terminal] = $"Terminal {_terminalSequence}";
 
         var panel = CreateTerminalPanel(terminal);
-        TerminalsContainer.Children.Add(panel);
+        var tab = new TabItem
+        {
+            Header = _terminalTitles[terminal],
+            Content = panel,
+            Tag = terminal
+        };
+        _terminalTabs[terminal] = tab;
+        TerminalsTabControl.Items.Add(tab);
+        TerminalsTabControl.SelectedItem = tab;
 
         StatusText.Text = $"Terminals: {_terminals.Count} | {_selectedProject.Path}";
         await RefreshInspectorAsync();
@@ -352,19 +365,39 @@ public partial class MainWindow : Window
             _terminals.Remove(terminal);
             _terminalInputHistory.Remove(terminal);
             _terminalInputHistoryIndex.Remove(terminal);
+            _terminalTitles.Remove(terminal);
 
-            foreach (var child in TerminalsContainer.Children.OfType<Border>())
+            if (_terminalTabs.TryGetValue(terminal, out var tab))
             {
-                if (child.Tag == terminal)
-                {
-                    TerminalsContainer.Children.Remove(child);
-                    break;
-                }
+                TerminalsTabControl.Items.Remove(tab);
+                _terminalTabs.Remove(terminal);
             }
 
             StatusText.Text = $"Terminals: {_terminals.Count}";
             await RefreshInspectorAsync();
         }
+    }
+
+    private void OnRenameTerminal(object sender, RoutedEventArgs e)
+    {
+        if (TerminalsTabControl.SelectedItem is not TabItem tab || tab.Tag is not TerminalPaneViewModel terminal)
+        {
+            MessageBox.Show("Please select a terminal tab first.", "Rename Terminal", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var currentTitle = _terminalTitles.TryGetValue(terminal, out var existing)
+            ? existing
+            : tab.Header?.ToString() ?? "Terminal";
+
+        var title = PromptForText("Rename Terminal", "Terminal title", currentTitle);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return;
+        }
+
+        _terminalTitles[terminal] = title;
+        tab.Header = title;
     }
 
     private async void OnGitStageAll(object sender, RoutedEventArgs e)
@@ -383,6 +416,66 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show($"Failed to stage changes: {ex.Message}", "Git Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void OnGitStageSelected(object sender, RoutedEventArgs e)
+    {
+        if (_selectedProject == null)
+        {
+            return;
+        }
+
+        var selectedFiles = GitChangesList.SelectedItems
+            .OfType<GitChangeListItem>()
+            .Select(item => item.FilePath)
+            .ToList();
+
+        if (selectedFiles.Count == 0)
+        {
+            MessageBox.Show("Please select at least one file.", "Git Stage", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            await _gitService.StageFilesAsync(_selectedProject.Path, selectedFiles);
+            StatusText.Text = $"Git: staged {selectedFiles.Count} file(s)";
+            await RefreshInspectorAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to stage selected files: {ex.Message}", "Git Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void OnGitUnstageSelected(object sender, RoutedEventArgs e)
+    {
+        if (_selectedProject == null)
+        {
+            return;
+        }
+
+        var selectedFiles = GitChangesList.SelectedItems
+            .OfType<GitChangeListItem>()
+            .Select(item => item.FilePath)
+            .ToList();
+
+        if (selectedFiles.Count == 0)
+        {
+            MessageBox.Show("Please select at least one file.", "Git Unstage", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            await _gitService.UnstageFilesAsync(_selectedProject.Path, selectedFiles);
+            StatusText.Text = $"Git: unstaged {selectedFiles.Count} file(s)";
+            await RefreshInspectorAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to unstage selected files: {ex.Message}", "Git Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -441,13 +534,15 @@ public partial class MainWindow : Window
 
                 var changes = (await _gitService.GetChangesAsync(_selectedProject.Path)).ToList();
                 GitChangeCountText.Text = changes.Count.ToString();
-                GitChangesList.ItemsSource = changes.Select(c => $"[{c.Status}] {c.FilePath}").ToList();
+                GitChangesList.ItemsSource = changes
+                    .Select(c => new GitChangeListItem(c.FilePath, c.Status, c.IsStaged))
+                    .ToList();
             }
             else
             {
                 GitCurrentBranchText.Text = "Not a git repository";
                 GitChangeCountText.Text = "0";
-                GitChangesList.ItemsSource = new[] { "No repository metadata found." };
+                GitChangesList.ItemsSource = new[] { new GitChangeListItem("-", "No repository metadata found.", false) };
             }
 
             var totalTokens = await _usageService.GetTotalUsageAsync();
@@ -469,6 +564,8 @@ public partial class MainWindow : Window
         _terminals.Clear();
         _terminalInputHistory.Clear();
         _terminalInputHistoryIndex.Clear();
+        _terminalTabs.Clear();
+        _terminalTitles.Clear();
     }
 
     private void NavigateTerminalHistory(TextBox input, TerminalPaneViewModel terminal, int delta)
@@ -523,5 +620,69 @@ public partial class MainWindow : Window
         {
             _isProjectSelectionInternalUpdate = false;
         }
+    }
+
+    private static string? PromptForText(string title, string label, string initialValue)
+    {
+        var owner = Application.Current?.MainWindow;
+        var input = new TextBox
+        {
+            Text = initialValue,
+            Margin = new Thickness(0, 6, 0, 10),
+            MinWidth = 280
+        };
+
+        var okButton = new Button
+        {
+            Content = "OK",
+            Width = 80,
+            Margin = new Thickness(0, 0, 8, 0),
+            IsDefault = true
+        };
+
+        var cancelButton = new Button
+        {
+            Content = "Cancel",
+            Width = 80,
+            IsCancel = true
+        };
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        buttons.Children.Add(okButton);
+        buttons.Children.Add(cancelButton);
+
+        var layout = new StackPanel
+        {
+            Margin = new Thickness(14)
+        };
+        layout.Children.Add(new TextBlock { Text = label });
+        layout.Children.Add(input);
+        layout.Children.Add(buttons);
+
+        var dialog = new Window
+        {
+            Title = title,
+            Width = 380,
+            Height = 170,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ResizeMode = ResizeMode.NoResize,
+            Owner = owner,
+            Content = layout
+        };
+
+        okButton.Click += (_, _) => dialog.DialogResult = true;
+
+        return dialog.ShowDialog() == true
+            ? input.Text.Trim()
+            : null;
+    }
+
+    private sealed record GitChangeListItem(string FilePath, string Status, bool IsStaged)
+    {
+        public string Label => $"[{(IsStaged ? "staged" : "unstaged")}] [{Status}] {FilePath}";
     }
 }

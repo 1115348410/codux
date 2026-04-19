@@ -97,4 +97,53 @@ public class GitService : IGitService
             }
         }, ct);
     }
+
+    public Task StageFilesAsync(string repoPath, IEnumerable<string> filePaths, CancellationToken ct = default)
+    {
+        return Task.Run(() =>
+        {
+            try
+            {
+                var files = filePaths.Distinct().ToList();
+                if (files.Count == 0)
+                {
+                    return;
+                }
+
+                using var repo = new Repository(repoPath);
+                Commands.Stage(repo, files);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to stage selected files in {RepoPath}", repoPath);
+                throw;
+            }
+        }, ct);
+    }
+
+    public Task UnstageFilesAsync(string repoPath, IEnumerable<string> filePaths, CancellationToken ct = default)
+    {
+        return Task.Run(() =>
+        {
+            try
+            {
+                var files = filePaths.Distinct().ToList();
+                if (files.Count == 0)
+                {
+                    return;
+                }
+
+                using var repo = new Repository(repoPath);
+                foreach (var file in files)
+                {
+                    Commands.Unstage(repo, file);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to unstage selected files in {RepoPath}", repoPath);
+                throw;
+            }
+        }, ct);
+    }
 }
