@@ -19,7 +19,7 @@ jobs:
 
       - name: Build Windows
         run: |
-          go build -ldflags="-s -w -X main.Version=0.3.0" -o codux.exe .
+          go build -ldflags="-s -w -X main.Version=0.3.0" -tags no_native_menus -o codux.exe .
         
       - name: Upload Windows exe
         uses: actions/upload-artifact@v4
@@ -66,11 +66,11 @@ jobs:
 
       - name: Build macOS
         run: |
-          go build -ldflags="-s -w -X main.Version=0.3.0" -o Codux.app/Contents/MacOS/codux .
+          go build -ldflags="-s -w -X main.Version=0.3.0" -o codux-macos .
         
-      - name: Upload macOS app
+      - name: Upload macOS binary
         uses: actions/upload-artifact@v4
         with:
-          name: Codux-macos-amd64.app
-          path: Codux.app
+          name: codux-macos-amd64
+          path: codux-macos
           retention-days: 30
