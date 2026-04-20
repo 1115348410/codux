@@ -1,25 +1,14 @@
-name: Release
+name: Build and Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - '260419-feat-tauri-go-reimplementation'
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        arch: [amd64]
-        include:
-          - os: ubuntu-latest
-            goos: linux
-          - os: windows-latest
-            goos: windows
-          - os: macos-latest
-            goos: darwin
-
+  build-windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -28,27 +17,60 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Install dependencies (Linux)
-        if: matrix.goos == 'linux'
+      - name: Build Windows
+        run: |
+          go build -ldflags="-s -w -X main.Version=0.3.0" -o codux.exe .
+        
+      - name: Upload Windows exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: codux-windows-amd64.exe
+          path: codux.exe
+          retention-days: 30
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev xorg-dev
 
-      - name: Install dependencies (macOS)
-        if: matrix.goos == 'darwin'
+      - name: Build Linux
         run: |
-          brew install glew
-
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.arch }}
-          CGO_ENABLED: 1
-        run: |
-          go build -ldflags="-s -w -X main.Version=${{ github.ref_name }}" -o codux-${{ matrix.goos }}-${{ matrix.arch }} .
-
-      - name: Upload artifact
+          go build -ldflags="-s -w -X main.Version=0.3.0" -o codux .
+        
+      - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
-          name: codux-${{ matrix.goos }}-${{ matrix.arch }}
-          path: codux-${{ matrix.goos }}-${{ matrix.arch }}
+          name: codux-linux-amd64
+          path: codux
+          retention-days: 30
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build macOS
+        run: |
+          go build -ldflags="-s -w -X main.Version=0.3.0" -o Codux.app/Contents/MacOS/codux .
+        
+      - name: Upload macOS app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Codux-macos-amd64.app
+          path: Codux.app
+          retention-days: 30
