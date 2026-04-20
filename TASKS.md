@@ -39,37 +39,37 @@
 ## 阶段一：项目初始化 (任务 1-8)
 
 ### 任务 1: 初始化 Go Module
-- [ ] 创建 go.mod
-- [ ] 配置模块名称 github.com/duxweb/codux
-- [ ] 添加基础依赖
+- [x] 创建 go.mod
+- [x] 配置模块名称 github.com/duxweb/codux
+- [x] 添加基础依赖
 
 ### 任务 2: 安装 Fyne 依赖
-- [ ] 安装 fyne.io/fyne/v2
+- [x] 安装 fyne.io/fyne/v2
 - [ ] 安装 fyne 工具 (fyne, fyne bundle)
-- [ ] 测试 Fyne Hello World
+- [x] 测试 Fyne Hello World
 
 ### 任务 3: 创建项目目录结构
-- [ ] 创建 internal/app
-- [ ] 创建 internal/models
-- [ ] 创建 internal/services
-- [ ] 创建 internal/ui
-- [ ] 创建 resources
+- [x] 创建 internal/app
+- [x] 创建 internal/models
+- [x] 创建 internal/services
+- [x] 创建 internal/ui
+- [x] 创建 resources
 - [ ] 创建 cmd 目录
 
 ### 任务 4: 实现基础窗口框架
-- [ ] 创建主窗口
-- [ ] 设置窗口标题和图标
+- [x] 创建主窗口
+- [x] 设置窗口标题和图标
 - [ ] 配置最小尺寸
 - [ ] 实现窗口保存/恢复
 
 ### 任务 5: 实现主题系统
-- [ ] 定义明暗主题
-- [ ] 实现主题切换功能
-- [ ] 添加主题持久化
+- [x] 定义明暗主题
+- [x] 实现主题切换功能
+- [x] 添加主题持久化
 - [ ] 实现系统主题跟随
 
 ### 任务 6: 实现菜单栏
-- [ ] 创建主菜单 (File, Edit, View, Help)
+- [x] 创建主菜单 (File, Edit, View, Help)
 - [ ] 实现应用内快捷键
 - [ ] 配置 macOS 原生菜单 (条件编译)
 
@@ -89,37 +89,37 @@
 ## 阶段二：数据模型与持久化 (任务 9-13)
 
 ### 任务 9: 定义核心数据模型
-- [ ] Project 模型 (ID, Name, Path, Icon, Color, Shell, DefaultCommand)
-- [ ] TerminalSession 模型 (ID, ProjectID, Title, Command, WorkingDir)
-- [ ] Workspace 模型 (ProjectID, Sessions, Layout, SelectedSession)
-- [ ] AppSettings 模型 (Theme, TerminalConfig, GitConfig, AIConfig)
-- [ ] 实现 JSON 序列化
+- [x] Project 模型 (ID, Name, Path, Icon, Color, Shell, DefaultCommand)
+- [x] TerminalSession 模型 (ID, ProjectID, Title, Command, WorkingDir)
+- [x] Workspace 模型 (ProjectID, Sessions, Layout, SelectedSession)
+- [x] AppSettings 模型 (Theme, TerminalConfig, GitConfig, AIConfig)
+- [x] 实现 JSON 序列化
 
 ### 任务 10: 设计 SQLite 数据库 Schema
-- [ ] 创建 projects 表
-- [ ] 创建 sessions 表
-- [ ] 创建 workspaces 表
-- [ ] 创建 settings 表
-- [ ] 创建 ai_usage 表
-- [ ] 添加索引
+- [x] 创建 projects 表
+- [x] 创建 sessions 表
+- [x] 创建 workspaces 表
+- [x] 创建 settings 表
+- [x] 创建 ai_usage 表
+- [x] 添加索引
 
 ### 任务 11: 实现数据库连接层
-- [ ] 集成 modernc.org/sqlite
-- [ ] 实现连接池管理
-- [ ] 实现数据库初始化
-- [ ] 添加错误处理
+- [x] 集成 modernc.org/sqlite
+- [x] 实现连接池管理
+- [x] 实现数据库初始化
+- [x] 添加错误处理
 
 ### 任务 12: 实现 CRUD 操作
-- [ ] Project CRUD
-- [ ] Session CRUD
-- [ ] Workspace CRUD
-- [ ] Settings CRUD
+- [x] Project CRUD
+- [x] Session CRUD
+- [x] Workspace CRUD
+- [x] Settings CRUD
 - [ ] 实现事务处理
 
 ### 任务 13: 实现应用状态快照
-- [ ] 设计快照格式
-- [ ] 实现启动时加载
-- [ ] 实现退出前保存
+- [x] 设计快照格式
+- [x] 实现启动时加载
+- [x] 实现退出前保存
 - [ ] 添加数据损坏恢复
 - [ ] 实现备份机制
 
@@ -128,40 +128,40 @@
 ## 阶段三：项目管理功能 (任务 14-20)
 
 ### 任务 14: 实现侧边栏导航
-- [ ] 创建侧边栏容器
-- [ ] 实现项目列表 (Fyne List)
-- [ ] 添加项目选择状态
+- [x] 创建侧边栏容器
+- [x] 实现项目列表 (Fyne List)
+- [x] 实现项目选择状态
 - [ ] 实现项目计数徽章
 - [ ] 添加展开/收起功能
 
 ### 任务 15: 实现项目列表项组件
-- [ ] 创建自定义 ListItem
-- [ ] 显示项目图标和颜色
-- [ ] 显示项目名称
-- [ ] 添加悬停效果
-- [ ] 实现右键菜单
+- [x] 创建自定义 ListItem
+- [x] 显示项目图标和颜色
+- [x] 显示项目名称
+- [x] 添加悬停效果
+- [x] 实现右键菜单
 
 ### 任务 16: 实现创建项目对话框
-- [ ] 设计对话框 UI
-- [ ] 项目名称输入框
-- [ ] 目录选择器 (Fyne FolderDialog)
+- [x] 设计对话框 UI
+- [x] 项目名称输入框
+- [x] 目录选择器 (Fyne FolderDialog)
 - [ ] 图标选择器
 - [ ] 颜色选择器
-- [ ] 表单验证
+- [x] 表单验证
 
 ### 任务 17: 实现编辑项目对话框
-- [ ] 复用创建对话框组件
-- [ ] 预填充现有数据
-- [ ] 实现更新逻辑
-- [ ] 添加删除确认对话框
+- [x] 复用创建对话框组件
+- [x] 预填充现有数据
+- [x] 实现更新逻辑
+- [x] 添加删除确认对话框
 
 ### 任务 18: 实现项目管理 Store
-- [ ] 创建 ProjectStore
-- [ ] 实现 AddProject
-- [ ] 实现 UpdateProject
-- [ ] 实现 DeleteProject
-- [ ] 实现 SelectProject
-- [ ] 添加状态通知
+- [x] 创建 ProjectStore
+- [x] 实现 AddProject
+- [x] 实现 UpdateProject
+- [x] 实现 DeleteProject
+- [x] 实现 SelectProject
+- [x] 添加状态通知
 
 ### 任务 19: 实现外部应用打开
 - [ ] VSCode 打开 (code 命令)
@@ -172,9 +172,9 @@
 - [ ] 平台兼容性处理
 
 ### 任务 20: 实现项目操作菜单
-- [ ] 右键菜单项
-- [ ] 编辑项目
-- [ ] 删除项目
+- [x] 右键菜单项
+- [x] 编辑项目
+- [x] 删除项目
 - [ ] 在外部编辑器打开
 - [ ] 在文件管理器显示
 
@@ -183,51 +183,51 @@
 ## 阶段四：终端与 PTY 管理 (任务 21-30)
 
 ### 任务 21: 集成 PTY 库
-- [ ] 安装 creack/pty
-- [ ] 实现 PTY 创建
-- [ ] 实现 PTY 读写
-- [ ] 实现 PTY 关闭
-- [ ] 添加错误处理
+- [x] 安装 creack/pty
+- [x] 实现 PTY 创建
+- [x] 实现 PTY 读写
+- [x] 实现 PTY 关闭
+- [x] 添加错误处理
 
 ### 任务 22: 实现 PTY 进程管理
-- [ ] 进程启动 (exec.Command)
-- [ ] 设置工作目录
-- [ ] 继承环境变量
-- [ ] 实现进程信号 (SIGINT, SIGTERM)
-- [ ] 处理进程退出
+- [x] 进程启动 (exec.Command)
+- [x] 设置工作目录
+- [x] 继承环境变量
+- [x] 实现进程信号 (SIGINT, SIGTERM)
+- [x] 处理进程退出
 
 ### 任务 23: 实现终端模拟器
-- [ ] 解析 ANSI 转义序列
+- [x] 解析 ANSI 转义序列
 - [ ] 处理光标移动
 - [ ] 处理颜色代码
-- [ ] 处理清屏命令
-- [ ] 实现缓冲显示
+- [x] 处理清屏命令
+- [x] 实现缓冲显示
 
 ### 任务 24: 实现终端显示组件
-- [ ] 自定义 Fyne Widget
-- [ ] 实现文本渲染
+- [x] 自定义 Fyne Widget
+- [x] 实现文本渲染
 - [ ] 支持多字体样式
-- [ ] 实现自动滚动
-- [ ] 添加滚动条
+- [x] 实现自动滚动
+- [x] 添加滚动条
 
 ### 任务 25: 实现终端输入处理
-- [ ] 键盘事件捕获
-- [ ] 实现文本输入
-- [ ] 处理特殊按键
+- [x] 键盘事件捕获
+- [x] 实现文本输入
+- [x] 处理特殊按键
 - [ ] 支持粘贴
 - [ ] 处理组合键
 
 ### 任务 26: 实现终端会话管理
-- [ ] 创建 TerminalSessionStore
-- [ ] 实现会话创建
-- [ ] 实现会话切换
-- [ ] 实现会话关闭
+- [x] 创建 TerminalSessionStore
+- [x] 实现会话创建
+- [x] 实现会话切换
+- [x] 实现会话关闭
 - [ ] 实现会话恢复
 
 ### 任务 27: 实现主工作区布局
-- [ ] 创建 Fyne Container
-- [ ] 实现单终端显示
-- [ ] 实现空状态提示
+- [x] 创建 Fyne Container
+- [x] 实现单终端显示
+- [x] 实现空状态提示
 - [ ] 添加工作区边框
 - [ ] 实现标题栏
 
@@ -240,8 +240,8 @@
 
 ### 任务 29: 实现终端主题系统
 - [ ] 定义终端配色方案
-- [ ] 内置 Dark 主题
-- [ ] 内置 Light 主题
+- [x] 内置 Dark 主题
+- [x] 内置 Light 主题
 - [ ] 自定义主题支持
 - [ ] 主题切换即时生效
 
@@ -257,11 +257,11 @@
 ## 阶段五：工作区分屏系统 (任务 31-37)
 
 ### 任务 31: 设计分屏布局模型
-- [ ] 定义 SplitLayout 结构
-- [ ] 水平分割模型
-- [ ] 垂直分割模型
-- [ ] 嵌套分割支持
-- [ ] 实现序列化处理
+- [x] 定义 SplitLayout 结构
+- [x] 水平分割模型
+- [x] 垂直分割模型
+- [x] 嵌套分割支持
+- [x] 实现序列化处理
 
 ### 任务 32: 实现分隔条组件
 - [ ] 创建 DraggableContainer
@@ -306,37 +306,37 @@
 ## 阶段六：Git 面板功能 (任务 38-47)
 
 ### 任务 38: 实现 Git 服务基础
-- [ ] 集成 go-git
-- [ ] 实现仓库打开
-- [ ] 实现状态获取
-- [ ] 实现分支列表
-- [ ] 处理 Git 错误
+- [x] 集成 go-git
+- [x] 实现仓库打开
+- [x] 实现状态获取
+- [x] 实现分支列表
+- [x] 处理 Git 错误
 
 ### 任务 39: 实现文件变更检测
-- [ ] 检测工作区变更
-- [ ] 检测暂存区变更
-- [ ] 文件状态分类 (Modified, Added, Deleted, Untracked)
+- [x] 检测工作区变更
+- [x] 检测暂存区变更
+- [x] 文件状态分类 (Modified, Added, Deleted, Untracked)
 - [ ] 实现忽略规则
 - [ ] 性能优化
 
 ### 任务 40: 实现 Git 命令执行器
-- [ ] git add
-- [ ] git restore --staged
-- [ ] git restore (工作区)
-- [ ] git commit
-- [ ] git checkout
-- [ ] git branch
+- [x] git add
+- [x] git restore --staged
+- [x] git restore (工作区)
+- [x] git commit
+- [x] git checkout
+- [x] git branch
 
 ### 任务 41: 实现右侧面板框架
-- [ ] 创建可折叠面板
-- [ ] 实现 Git/AI 面板切换
+- [x] 创建可折叠面板
+- [x] 实现 Git/AI 面板切换
 - [ ] 添加面板宽度调节
 - [ ] 实现面板记忆
 
 ### 任务 42: 实现 Git 文件列表
-- [ ] 变更文件列表 UI
-- [ ] 显示文件路径
-- [ ] 显示文件状态图标
+- [x] 变更文件列表 UI
+- [x] 显示文件路径
+- [x] 显示文件状态图标
 - [ ] 实现多选
 - [ ] 添加 Diff 预览
 
@@ -348,23 +348,23 @@
 - [ ] 优化大文件性能
 
 ### 任务 44: 实现 Commit 界面
-- [ ] Commit 消息输入框
-- [ ] 多行文本支持
-- [ ] 提交按钮
+- [x] Commit 消息输入框
+- [x] 多行文本支持
+- [x] 提交按钮
 - [ ] 显示提交历史
 - [ ] 历史条目详情
 
 ### 任务 45: 实现分支管理 UI
-- [ ] 显示当前分支
+- [x] 显示当前分支
 - [ ] 分支列表
 - [ ] 创建分支对话框
 - [ ] 切换分支
 - [ ] 删除分支确认
 
 ### 任务 46: 实现远程同步 UI
-- [ ] Fetch 按钮
-- [ ] Pull 按钮
-- [ ] Push 按钮
+- [x] Fetch 按钮
+- [x] Pull 按钮
+- [x] Push 按钮
 - [ ] 显示远程状态
 - [ ] 进度指示器
 

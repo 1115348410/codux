@@ -9,17 +9,21 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/duxweb/codux/internal/app"
 	"github.com/duxweb/codux/internal/services/git"
+	"github.com/duxweb/codux/internal/ui/widgets"
 )
 
 // RightPanelView 右侧面板视图
 type RightPanelView struct {
 	widget.BaseWidget
-	window     fyne.Window
-	store      *app.Store
-	tabs       *container.AppTabs
-	gitService *git.Service
-	gitContent fyne.CanvasObject
-	aiContent  fyne.CanvasObject
+	window       fyne.Window
+	store        *app.Store
+	tabs         *container.AppTabs
+	gitService   *git.Service
+	gitContent   fyne.CanvasObject
+	aiContent    fyne.CanvasObject
+	diffView     *widgets.DiffView
+	fileList     *widget.List
+	selectedFile string
 }
 
 // NewRightPanelView 创建右侧面板视图
@@ -55,8 +59,31 @@ func (rpv *RightPanelView) createGitPanel() {
 	statusLabel := widget.NewLabel("未选择项目")
 	statusLabel.TextStyle = fyne.TextStyle{Italic: true}
 
+	// 分支信息
+	branchLabel := widget.NewLabel("Branch: -")
+
+	// 按钮
+	refreshBtn := widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
+		rpv.refreshGitStatus()
+	})
+
+	fetchBtn := widget.NewButton("Fetch", func() {
+		rpv.doFetch()
+	})
+	pullBtn := widget.NewButton("Pull", func() {
+		rpv.doPull()
+	})
+	pushBtn := widget.NewButton("Push", func() {
+		rpv.doPush()
+	})
+
+	buttonRow := container.NewHBox(refreshBtn, fetchBtn, pullBtn, pushBtn)
+
+	// Diff 查看器
+	rpv.diffView = widgets.NewDiffView()
+
 	// 文件列表
-	fileList := widget.NewList(
+	rpv.fileList = widget.NewList(
 		func() int { return 0 },
 		func() fyne.CanvasObject {
 			return container.NewHBox(
@@ -69,21 +96,6 @@ func (rpv *RightPanelView) createGitPanel() {
 		func(id widget.ListItemID, item fyne.CanvasObject) {},
 	)
 
-	// 分支信息
-	branchLabel := widget.NewLabel("Branch: main")
-
-	// 按钮
-	refreshBtn := widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
-		rpv.refreshGitStatus()
-	})
-
-	stashBtn := widget.NewButton("Stash", func() {})
-	fetchBtn := widget.NewButton("Fetch", func() {})
-	pullBtn := widget.NewButton("Pull", func() {})
-	pushBtn := widget.NewButton("Push", func() {})
-
-	buttonRow := container.NewHBox(refreshBtn, stashBtn, fetchBtn, pullBtn, pushBtn)
-
 	// 提交信息
 	commitEntry := widget.NewEntry()
 	commitEntry.SetPlaceHolder("提交信息")
@@ -93,18 +105,6 @@ func (rpv *RightPanelView) createGitPanel() {
 		rpv.doCommit(commitEntry.Text)
 	})
 
-	// 历史记录
-	historyList := widget.NewList(
-		func() int { return 0 },
-		func() fyne.CanvasObject {
-			return container.NewVBox(
-				widget.NewLabel("commit hash"),
-				widget.NewLabel("commit message"),
-			)
-		},
-		func(id widget.ListItemID, item fyne.CanvasObject) {},
-	)
-
 	// 组装面板
 	content := container.NewVBox(
 		container.NewHBox(branchLabel, layout.NewSpacer(), statusLabel),
@@ -112,16 +112,15 @@ func (rpv *RightPanelView) createGitPanel() {
 		buttonRow,
 		widget.NewSeparator(),
 		widget.NewLabel("变更文件"),
-		fileList,
+		rpv.fileList,
+		widget.NewSeparator(),
+		rpv.diffView,
 		widget.NewSeparator(),
 		commitEntry,
 		commitBtn,
-		widget.NewSeparator(),
-		widget.NewLabel("提交历史"),
-		historyList,
 	)
 
-	rpv.gitContent = container.NewVScroll(content)
+	rpv.gitContent = container.NewBorder(nil, nil, nil, nil, container.NewVScroll(content))
 }
 
 // createAIPanel 创建 AI 统计面板
@@ -179,12 +178,92 @@ func (rpv *RightPanelView) refreshGitStatus() {
 		return
 	}
 
-	_, err := rpv.gitService.GetRepositoryState(project.Path)
+	state, err := rpv.gitService.GetRepositoryState(project.Path)
 	if err != nil {
+		dialog.ShowError(err, rpv.window)
 		return
 	}
 
-	// TODO: 更新 UI
+	// 更新文件列表
+	allFiles := append(state.ModifiedFiles, state.StagedFiles...)
+	allFiles = append(allFiles, state.UntrackedFiles...)
+
+	fileListData := allFiles
+	rpv.fileList.Length = func() int { return len(fileListData) }
+	rpv.fileList.CreateItem = func() fyne.CanvasObject {
+		return container.NewHBox(
+			widget.NewIcon(theme.DocumentIcon()),
+			widget.NewLabel(""),
+			layout.NewSpacer(),
+			widget.NewLabel(""),
+		)
+	}
+	rpv.fileList.UpdateItem = func(id widget.ListItemID, item fyne.CanvasObject) {
+		if id < len(fileListData) {
+			file := fileListData[id]
+			if hBox, ok := item.(*fyne.Container); ok {
+				if label, ok := hBox.Objects[1].(*widget.Label); ok {
+					label.SetText(file.Path)
+				}
+				if statusLabel, ok := hBox.Objects[3].(*widget.Label); ok {
+					statusLabel.SetText(file.Status)
+				}
+			}
+		}
+	}
+	rpv.fileList.Refresh()
+
+	// 文件选择回调
+	rpv.fileList.OnSelected = func(id widget.ListItemID) {
+		if id < len(fileListData) {
+			file := fileListData[id]
+			rpv.selectedFile = file.Path
+			diff, _ := rpv.gitService.GetDiff(project.Path, file.Path)
+			if rpv.diffView != nil {
+				rpv.diffView.SetDiff(diff)
+			}
+		}
+	}
+}
+
+// doFetch 执行 Fetch
+func (rpv *RightPanelView) doFetch() {
+	project := rpv.store.SelectedProject()
+	if project == nil {
+		return
+	}
+	err := rpv.gitService.Fetch(project.Path)
+	if err != nil {
+		dialog.ShowError(err, rpv.window)
+	}
+}
+
+// doPull 执行 Pull
+func (rpv *RightPanelView) doPull() {
+	project := rpv.store.SelectedProject()
+	if project == nil {
+		return
+	}
+	err := rpv.gitService.Pull(project.Path)
+	if err != nil {
+		dialog.ShowError(err, rpv.window)
+	} else {
+		dialog.ShowInformation("Pull 成功", "代码已更新", rpv.window)
+	}
+}
+
+// doPush 执行 Push
+func (rpv *RightPanelView) doPush() {
+	project := rpv.store.SelectedProject()
+	if project == nil {
+		return
+	}
+	err := rpv.gitService.Push(project.Path)
+	if err != nil {
+		dialog.ShowError(err, rpv.window)
+	} else {
+		dialog.ShowInformation("Push 成功", "代码已推送", rpv.window)
+	}
 }
 
 // doCommit 执行提交
@@ -206,4 +285,5 @@ func (rpv *RightPanelView) doCommit(message string) {
 	}
 
 	dialog.ShowInformation("提交成功", "代码已提交", rpv.window)
+	rpv.refreshGitStatus()
 }

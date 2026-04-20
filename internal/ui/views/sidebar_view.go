@@ -18,6 +18,7 @@ type SidebarView struct {
 	projectList *widget.List
 	projects    []*models.Project
 	selectedID  *models.UUID
+	popup       *widget.PopUpMenu
 }
 
 // NewSidebarView 创建侧边栏视图
@@ -80,16 +81,15 @@ func (sv *SidebarView) CreateRenderer() fyne.WidgetRenderer {
 	}
 
 	// 底部按钮
+	actionBtn := widget.NewButtonWithIcon("操作", theme.MoreHorizontalIcon(), func() {
+		sv.showProjectActions()
+	})
+
 	btnContainer := container.NewVBox(
 		widget.NewButtonWithIcon("添加项目", theme.ContentAddIcon(), func() {
 			sv.showAddProjectDialog()
 		}),
-		widget.NewButtonWithIcon("编辑", theme.SettingsIcon(), func() {
-			sv.showEditProjectDialog()
-		}),
-		widget.NewButtonWithIcon("删除", theme.DeleteIcon(), func() {
-			sv.showDeleteConfirmDialog()
-		}),
+		actionBtn,
 	)
 
 	// 垂直布局
@@ -223,4 +223,39 @@ func (sv *SidebarView) showDeleteConfirmDialog() {
 			sv.Refresh()
 		}
 	}, sv.window)
+}
+
+// showProjectActions 显示项目操作菜单
+func (sv *SidebarView) showProjectActions() {
+	if sv.selectedID == nil {
+		dialog.ShowError(nil, sv.window)
+		return
+	}
+
+	project := sv.store.SelectedProject()
+	if project == nil {
+		return
+	}
+
+	content := container.NewVBox(
+		widget.NewButtonWithIcon("在 VSCode 中打开", theme.ViewFullScreenIcon(), func() {
+			app.OpenInVSCode(project.Path)
+		}),
+		widget.NewButtonWithIcon("在终端中打开", theme.FolderIcon(), func() {
+			app.OpenInTerminal(project.Path)
+		}),
+		widget.NewButtonWithIcon("在文件管理器显示", theme.FolderOpenIcon(), func() {
+			app.OpenInFinder(project.Path)
+		}),
+		widget.NewSeparator(),
+		widget.NewButtonWithIcon("编辑项目", theme.SettingsIcon(), func() {
+			sv.showEditProjectDialog()
+		}),
+		widget.NewButtonWithIcon("删除项目", theme.DeleteIcon(), func() {
+			sv.showDeleteConfirmDialog()
+		}),
+	)
+
+	d := dialog.NewCustom("项目操作", "", content, sv.window)
+	d.Show()
 }

@@ -3,11 +3,8 @@ package settings
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/duxweb/codux/internal/app"
-	"github.com/duxweb/codux/internal/models"
 )
 
 // SettingsWindow 设置窗口
@@ -26,7 +23,7 @@ func NewSettingsWindow(parent fyne.Window, store *app.Store) *SettingsWindow {
 
 // Show 显示设置窗口
 func (s *SettingsWindow) Show() {
-	w := s.window.App().NewWindow("Codux 设置")
+	w := fyne.CurrentApp().NewWindow("Codux 设置")
 	w.Resize(fyne.NewSize(600, 400))
 
 	// 创建设置内容
@@ -94,22 +91,40 @@ func (s *SettingsWindow) createGeneralTab() fyne.CanvasObject {
 func (s *SettingsWindow) createTerminalTab() fyne.CanvasObject {
 	settings := s.store.Settings()
 
+	// 字体大小
 	fontSizeEntry := widget.NewEntry()
 	fontSizeEntry.SetText("14")
 
 	fontSizeSlider := widget.NewSlider(10, 24)
 	fontSizeSlider.Value = float64(settings.TerminalFontSize)
-
 	fontSizeSlider.OnChanged = func(value float64) {
 		settings.TerminalFontSize = value
 		s.store.UpdateSettings(settings)
-		fontSizeEntry.SetText(string(rune(int(value) + '0')))
+		fontSizeEntry.SetText(string(rune(int(value)+'0') + '0'))
 	}
 
+	// 终端快捷键
+	shortcutKeyEntry := widget.NewEntry()
+	shortcutKeyEntry.SetPlaceHolder("按组合键设置...")
+	shortcutKeyEntry.Disable()
+
+	clearHistoryBtn := widget.NewButton("清空终端历史", func() {
+		// TODO: 清空历史
+	})
+
 	return container.NewVBox(
+		widget.NewLabel("外观"),
 		widget.NewForm(
-			widget.NewFormItem("字体大小", container.NewHBox(fontSizeEntry, fontSizeSlider)),
+			widget.NewFormItem("字体大小", container.NewHBox(fontSizeSlider, fontSizeEntry)),
 		),
+		widget.NewSeparator(),
+		widget.NewLabel("快捷键"),
+		widget.NewForm(
+			widget.NewFormItem("搜索终端", shortcutKeyEntry),
+		),
+		widget.NewSeparator(),
+		widget.NewLabel("其他"),
+		container.NewHBox(clearHistoryBtn),
 	)
 }
 

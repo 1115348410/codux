@@ -1,17 +1,23 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"fyne.io/fyne/v2"
-	fyneApp "fyne.io/fyne/v2/app"
-	"github.com/duxweb/codux/internal/app"
+	"fyne.io/fyne/v2/app"
+
+	internalapp "github.com/duxweb/codux/internal/app"
 	"github.com/duxweb/codux/internal/ui/menu"
 	coduxtheme "github.com/duxweb/codux/internal/ui/theme"
 	"github.com/duxweb/codux/internal/ui/views"
 )
 
+var Version = "0.2.0"
+
 func main() {
 	// 创建 Fyne 应用
-	a := fyneApp.NewWithID("io.github.duxweb.codux")
+	a := app.NewWithID("io.github.duxweb.codux")
 
 	// 创建自定义主题
 	coduxTheme := coduxtheme.NewCoduxTheme()
@@ -19,9 +25,10 @@ func main() {
 	a.Settings().SetTheme(coduxTheme)
 
 	// 创建应用 Store
-	store, err := app.NewStore()
+	store, err := internalapp.NewStore()
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Failed to create store: %v\n", err)
+		os.Exit(1)
 	}
 	defer store.Close()
 
@@ -40,6 +47,11 @@ func main() {
 
 	// 设置窗口大小
 	w.Resize(fyne.NewSize(1200, 800))
+
+	// 窗口关闭处理器
+	w.SetOnClosed(func() {
+		store.Close()
+	})
 
 	// 显示窗口
 	w.ShowAndRun()

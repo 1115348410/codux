@@ -1,12 +1,15 @@
 package views
 
 import (
+	"os"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/duxweb/codux/internal/app"
+	"github.com/duxweb/codux/internal/ui/widgets"
 )
 
 // WorkspaceView 工作区视图
@@ -14,7 +17,9 @@ type WorkspaceView struct {
 	widget.BaseWidget
 	window    fyne.Window
 	store     *app.Store
-	splitView *fyne.Container
+	splitView fyne.CanvasObject
+	terminal  *widgets.TerminalWidget
+	sessionID string
 }
 
 // NewWorkspaceView 创建工作区视图
@@ -90,11 +95,52 @@ func (wv *WorkspaceView) createToolbar() fyne.CanvasObject {
 }
 
 func (wv *WorkspaceView) createTerminal(projectID string) fyne.CanvasObject {
-	// TODO: 集成 terminal widget
-	terminal := widget.NewLabel("终端显示区域")
-	terminal.TextStyle = fyne.TextStyle{Monospace: true}
+	// 使用项目 ID 作为会话 ID
+	wv.sessionID = projectID
 
-	scroll := container.NewScroll(terminal)
+	// 创建终端组件
+	wv.terminal = widgets.NewTerminalWidget()
+	wv.terminal.SetOnInput(func(data []byte) {
+		// 发送输入到 PTY
+		wv.store.Terminal().WriteToSession(wv.sessionID, data)
+	})
 
+	// 启动 PTY 进程（如果尚未启动）
+	termService := wv.store.Terminal()
+	pty := termService.GetSession(wv.sessionID)
+	if pty == nil {
+		// 创建新的终端会话，默认启动 shell
+		shell := os.Getenv("SHELL")
+		if shell == "" {
+			shell = "/bin/bash"
+		}
+		err := termService.CreateSession(wv.sessionID, shell, "")
+		if err != nil {
+			// 创建失败，显示错误信息
+			errLabel := widget.NewLabel("Failed to start terminal: " + err.Error())
+			errLabel.TextStyle = fyne.TextStyle{Monospace: true}
+			return container.NewScroll(errLabel)
+		}
+		pty = termService.GetSession(wv.sessionID)
+	}
+
+	// 读取终端输出
+	if pty != nil {
+		go func() {
+			buffer := make([]byte, 4096)
+			for {
+				n, err := pty.Read(buffer)
+				if err != nil || n == 0 {
+					break
+				}
+				// 在主线程中更新 UI
+				fyne.Do(func() {
+					wv.terminal.Append(string(buffer[:n]))
+				})
+			}
+		}()
+	}
+
+	scroll := container.NewScroll(wv.terminal)
 	return scroll
 }
