@@ -15,62 +15,18 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Download Dependencies
+        run: go mod download
 
       - name: Build Windows
-        run: |
-          go build -ldflags="-s -w -X main.Version=0.3.0" -tags no_native_menus -o codux.exe .
+        run: go build -ldflags="-s -w -X main.Version=0.3.0" -o codux.exe .
         
       - name: Upload Windows exe
         uses: actions/upload-artifact@v4
         with:
           name: codux-windows-amd64.exe
           path: codux.exe
-          retention-days: 30
-
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev xorg-dev
-
-      - name: Build Linux
-        run: |
-          go build -ldflags="-s -w -X main.Version=0.3.0" -o codux .
-        
-      - name: Upload Linux binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: codux-linux-amd64
-          path: codux
-          retention-days: 30
-
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-
-      - name: Build macOS
-        run: |
-          go build -ldflags="-s -w -X main.Version=0.3.0" -o codux-macos .
-        
-      - name: Upload macOS binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: codux-macos-amd64
-          path: codux-macos
           retention-days: 30
